@@ -1,0 +1,1473 @@
+ID,Source,Issue Title,Category,Pattern,Description,Issue URL,PR URL,Data Available,Remark 2
+0,,"AWS Inspector report High CWE-117,93 - Log injection lambda python code",IL,IL-At,"Describe the outcome you'd like
+There is lots of High findings in AWS inspector for aft*.py for logger.info.
+1.13.0 AFT
+
+A clear and concise description of what you want to happen.
+
+From inspector Suggested remediaton
+Why are we recommending the following fix?
+
+You have a log statement that might use unsanitized input. Depending on the context, this could result in:
+
+A log injection attack that breaks log integrity, forges log entries, or bypasses monitors that use the logs. To increase the security of your code, sanitize your inputs before logging them. [Learn more ](https://cwe.mitre.org/data/definitions/117.html)",https://github.com/aws-ia/terraform-aws-control_tower_account_factory/issues/488?utm_source=chatgpt.com,https://github.com/aws-ia/terraform-aws-control_tower_account_factory/issues/488?utm_source=chatgpt.com,,
+2,,Add default message escaping for Log4J2 configuration to help prevent log injection attacks,IL,IL-At,"to prevent log injections of CRLF or HTML code (which could be exploited if the logs are displayed in an HTML page), we should change the default log4j2 pattern in Karaf from:
+
+log4j2.pattern = %d{ISO8601} | %-5p | %-16t | %-32c{1} | %X{bundle.id} - %X{bundle.name} - %X{bundle.version} | %m%n
+
+to something like this:
+
+log4j2.pattern = %d{ISO8601} | %-5p | %-16t | %-32c{1} | %X{bundle.id} - %X{bundle.name} - %X{bundle.version} | %encode{%.-500m}%n
+
+See :
+
+This would limit the message to 500 characters to prevent sending huge messages and will turn on the default HTML escaping which escapes for CRLF and any HTML tags such as <script>",https://issues.apache.org/jira/browse/KARAF-7061#:~:text=Created%3A%2005%2FMar%2F21%2010%3A18,https://github.com/apache/karaf/pull/1318/commits/bac366abbc27e9961476d303e54fa17820fee765,,
+3,,Password configs are logged in plaintext in KRaft,SS,SS-Ur,"I also noticed that ConfigurationControlManager is logging sensitive configs in plaintext at INFO level.
+
+[2022-07-27 12:14:09,927] INFO [Controller 1] ConfigResource(type=BROKER, name='1'): set configuration listener.name.external.ssl.key.password to bar (org.apache.kafka.controller.ConfigurationControlManager)
+
+Once this new config reaches the broker, it is logged again, but this time it is redacted
+
+[2022-07-27 12:14:09,957] INFO [BrokerMetadataPublisher id=1] Updating broker 1 with new configuration : listener.name.external.ssl.key.password -> [hidden] (kafka.server.metadata.BrokerMetadataPublisher)
+",https://issues.apache.org/jira/browse/KAFKA-14115#:~:text=Created%3A%2027%2FJul%2F22%2016%3A16,https://github.com/apache/kafka/pull/12481,,
+4,,Hadoop prints sensitive Cookie information.,SS,SS-Ur,"
+
+org.apache.hadoop.security.authentication.client.AuthenticatedURL.AuthCookieHandler#setAuthCookie - prints cookie information in log. Any sensitive infomation in Cookies will be logged, which needs to be avaided.
+
+LOG.trace(""Setting token value to {} ({})"", authCookie, oldCookie);","https://issues.apache.org/jira/browse/HADOOP-17510#:~:text=org.apache.hadoop.security.authentication.client.AuthenticatedURL.AuthCookieHand%20ler%23setAuthCookie%20,which%20needs%20to%20be%20avaided",https://github.com/apache/hadoop/pull/2673,,
+5,,Redact sensitive information in Spark Thrift Server log,RM,RM-Ms,"
+
+Spark Thrift Server logs query without sensitive information redaction in org.apache.spark.sql.hive.thriftserver.SparkExecuteStatementOperation.scala
+
+  override def runInternal(): Unit = {
+    setState(OperationState.PENDING)
+    logInfo(s""Submitting query '$statement' with $statementId"")
+
+Logs
+
+21/08/03 20:49:46 INFO SparkExecuteStatementOperation: Submitting query 'CREATE OR REPLACE TEMPORARY VIEW test_view
+    USING org.apache.spark.sql.jdbc
+    OPTIONS (
+        url=""jdbc:mysql://example.com:3306"",
+        driver=""com.mysql.jdbc.Driver"",
+        dbtable=""example.test"",
+        user=""my_username"",
+        password=""my_password""
+    )' with 37e5d2cb-aa96-407e-b589-7cb212324100
+21/08/03 20:49:46 INFO SparkExecuteStatementOperation: Running query with 37e5d2cb-aa96-407e-b589-7cb212324100
+",https://issues.apache.org/jira/browse/SPARK-36398#:~:text=Created%3A%2003%2FAug%2F21%2022%3A04,https://github.com/apache/spark/pull/33743/commits/a7218c7abe1b1f6db0259de024f717a21693a122+https://github.com/apache/spark/pull/33832/commits/4a86a75704dfedc3541c89344af6b4b2a43e16e6,,
+6,,HiveClientImpl may be log sensitive information,RM,RM-Ms,"HiveClientImpl may be log sensitive information. e.g. url, secret and token:
+
+      logDebug(
+        s""""""
+           |Applying Hadoop/Hive/Spark and extra properties to Hive Conf:
+           |$k=${if (k.toLowerCase(Locale.ROOT).contains(""password"")) ""xxx"" else v}
+         """""".stripMargin)
+",https://issues.apache.org/jira/browse/SPARK-29247?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel,https://github.com/apache/spark/pull/25954/commits/6aa0819fecae338063814945ea86df94b76513d8+https://github.com/apache/spark/pull/25954/commits/8ac5e73ec9d5ffa3707520b40d2cd66d71f37547+https://github.com/apache/spark/pull/25954/commits/b056622068a300c44340fd02b3773fda81a52f73,,
+7,,Hide sensitive command-line configurations,RM,RM-Ms,"When jobmanager starts up, it logs configurations from jvm options and application arguments. This includes secrets (eg. ""s3.secret-key"").
+Ideally, secrets should be masked as it is when loading from configuration file.",https://issues.apache.org/jira/browse/FLINK-19523#:~:text=Created%3A%2007%2FOct%2F20%2020%3A29,https://github.com/apache/flink/pull/13609/commits/c8c5eee65fdcb15353189eb29cad3ec5bd767c29,,
+8,,Table API exceptions may leak sensitive configuration values,SS,SS-Ur,"
+
+This following is error message. Password is 'bar' and is displayed.
+
+Could we hidden it to password='******' or password='<hidden>' inspired by Apache Kafka source code.
+
+Missing required options are:
+
+hosts 
+
+Unable to create a sink for writing table 'default_catalog.default_database.dws'.
+
+Table options are:
+
+'connector'='elasticsearch7-x'
+'index'='foo'
+'password'='bar'
+	at org.apache.flink.table.factories.FactoryUtil.createTableSink(FactoryUtil.java:208)
+	at org.apache.flink.table.planner.delegation.PlannerBase.getTableSink(PlannerBase.scala:369)
+	at org.apache.flink.table.planner.delegation.PlannerBase.translateToRel(PlannerBase.scala:221)
+	at org.apache.flink.table.planner.delegation.PlannerBase.$anonfun$translate$1(PlannerBase.scala:159
+",https://issues.apache.org/jira/browse/FLINK-24381?page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel&focusedCommentId=17433696,https://github.com/apache/flink/pull/17555/commits/cd2d4721466fb277298c3842bb27e29244b44437+https://github.com/apache/flink/pull/17555/commits/907d080f302fcd5851afb178e981a122de09bbb5+https://github.com/apache/flink/pull/17555/commits/08ace1b29f43e1b260e04a4d76bc1dbf270ad402,,
+9,,getTGT() in Login.java mishandles confidential information,SS,SS-Cr,"
+
+We're logging the kerberos ticket when in debug mode, probably not the best idea. This was identified as a ""critical"" issue by Fortify.
+
+        for(KerberosTicket ticket: tickets) {
+            KerberosPrincipal server = ticket.getServer();
+            if (server.getName().equals(""krbtgt/"" + server.getRealm() + ""@"" + server.getRealm())) {
+                LOG.debug(""Found tgt "" + ticket + ""."");
+                return ticket;
+            }
+        }
+",https://issues.apache.org/jira/browse/ZOOKEEPER-2405,https://issues.apache.org/jira/browse/ZOOKEEPER-2405,,
+10,,mod_dav_svn displays real path to repository when empty,EE,EE-Ex,"When accessing an empty repository (not initialized), mod_dav_svn
+displays the real path to the repository in the message:
+
+
+Expected version '1' of repository; found no version at all; is
+`c:/svn/repository' a valid repository path?
+
+I would consider this a potential security risk...",https://issues.apache.org/jira/browse/SVN-1051,https://issues.apache.org/jira/secure/attachment/12762766/1_r7930.patch,,
+11,,KafkaSource not working,IL,IL-Lv,"
+
+I tried running the KafkaConsumerExample with that is subscribing to a console producer of kafka but the KafkaConsumerExample topology was not receiving any data from Kafka. Then I wrote my own topology that uses Kafka as a source but it didn't work as well. The topologies would run but receive not data. If I run a console consumer that subscibes to the topic of the console producer, the console consumer receives data from the producer which indicates the producer is working correctly. Can someone help me with this problem?
+
+Kafka console producer I am running:
+
+bin/kafka-console-producer.sh --broker-list localhost:9092 --topic test
+
+The flink code I am running:
+
+public class KafkaDataProcessor {
+	private static int port;
+	private static String hostname;
+	private static String topic;
+	private static final Logger LOG = LoggerFactory.getLogger(KafkaDataProcessor.class);
+
+	public static void main(String[] args) {
+		if (!parseParameters(args)) {
+			return;
+		}
+		System.out.println(""Start listening for data on: "" + hostname + "":"" + port + "" for topic: "" + topic);
+		StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+
+		DataStream<Tuple2<String, Integer>> dataStream = env
+						.addSource(new KafkaSource(hostname + "":"" + port, topic, ""test-consumer-group"", new SimpleStringSchema(), 200L), ""Kafka source"").setParallelism(2)
+										.flatMap(new Splitter()).setParallelism(2)
+										.groupBy(0)
+										.sum(1).setParallelism(2);
+
+
+		dataStream.print().setParallelism(2);
+
+
+
+		try {
+			env.execute(""kafka processor"");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	public static class Splitter implements FlatMapFunction<String, Tuple2<String, Integer>> {
+		@Override
+		public void flatMap(String sentence, Collector<Tuple2<String, Integer>> out) throws Exception {
+			for (String word : sentence.split("" "")) {
+				System.out.println(""word: "" + word);
+				LOG.info(""word: {}"", word);
+				out.collect(new Tuple2<String, Integer>(word, 1));
+			}
+		}
+	}
+
+	private static boolean parseParameters(String[] args) {
+
+		if (args.length > 0) {
+			if (args.length == 3) {
+				hostname = args[0];
+				port = Integer.parseInt(args[1]);
+				topic = args[2];
+			} else {
+				System.err.println(""Usage: KafkaDataProcessor <hostname> <Port> <topic>"");
+				return false;
+			}
+		} else {
+			System.out.println(""Executing KafkaDataProcessor example with built-in default data."");
+			System.out.println(""  Provide Hostname and Port to read input data from."");
+			System.out.println(""  Usage: KafkaDataProcessor <Hostname> <Port> <topic>"");
+			return false;
+		}
+		return true;
+	}
+}
+",https://issues.apache.org/jira/browse/FLINK-2585,https://issues.apache.org/jira/browse/FLINK-2585,,
+12,,getTGT() debug logging exposes confidential information,SS,SS-Cr,getTGT() debug logging exposes confidential information,https://issues.apache.org/jira/browse/KAFKA-3830,https://github.com/apache/kafka/pull/1498/commits/aac856f5a3a64123f798788b31707521e9157519,,
+13,,[Broker-J] Do not expose private information to exception message,EE,EE-Ex,"
+
+    Obfuscate password value if IllegalArgumentException is thrown in ConfiguredAutomatedAttribute.convert()
+    Do not add base64String to IllegalArgumentException message in Strings.java as it can contain private information
+",https://issues.apache.org/jira/browse/QPID-8460,https://github.com/apache/qpid-broker-j/pull/55/commits/772a9b6fabb2b17969ab2922e3bd2bceb74730bf+https://github.com/apache/qpid-broker-j/pull/55/commits/8c1e2e3eea45c817c823614a2dddeccbe43b5640,,
+14,,Test Relocatable Savepoints+Make savepoints self-contained and relocatable,RM,RM-Ms,"Test on a real cluster, Result excepted.
+
+    savepoint relocate can restore successfully
+    checkpoint relocate will be failed with FileNotFoundException
+
+commit : 8ca67c962a5575aba3a43b8cfd4a79ffc8069bd4
+
+The Long log attached below:
+
+username/ip/port and other sensitive information has been masked.
+
+    For Savepoint
+
+ 
+
+[~/flink-1.11-SNAPSHOT]$ ./bin/flink savepoint 9bcc2546a841b36a39c46fbe13a2b631 hdfs:///user/xxxxxx/congxianqiu/savepoint -yid application_1591259429117_0007
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/data/work/congxianqiu/flink-1.11-SNAPSHOT/lib/log4j-slf4j-impl-2.12.1.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/data/xxxxxx/hadoop/hadoop-2.7.4/share/hadoop/common/lib/slf4j-log4j12-1.7.10.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]
+2020-06-05 20:27:43,039 WARN  org.apache.flink.yarn.configuration.YarnLogConfigUtil        [] - The configuration directory ('/data/work/congxianqiu/flink-1.11-SNAPSHOT/conf') already contains a LOG4J config file.If you want to use logback, then please delete or rename the log configuration file.
+2020-06-05 20:27:43,422 INFO  org.apache.flink.yarn.YarnClusterDescriptor                  [] - No path for the flink jar passed. Using the location of class org.apache.flink.yarn.YarnClusterDescriptor to locate the jar
+2020-06-05 20:27:43,513 INFO  org.apache.flink.yarn.YarnClusterDescriptor                  [] - Found Web Interface 10-215-128-84:35572 of application 'application_1591259429117_0007'.
+Triggering savepoint for job 9bcc2546a841b36a39c46fbe13a2b631.
+Waiting for response...
+Savepoint completed. Path: hdfs://ip:port/user/xxxxxx/congxianqiu/savepoint/savepoint-9bcc25-4ed827357f33
+You can resume your program from this savepoint with the run command.
+
+[~/flink-1.11-SNAPSHOT]$ hadoop fs -ls congxianqiu/savepoint
+Found 1 items
+drwxr-xr-x   - xxxxxx supergroup          0 2020-06-05 20:27 congxianqiu/savepoint/savepoint-9bcc25-4ed827357f33
+[~/congxianqiu/flink-1.11-SNAPSHOT]$ hadoop fs -ls congxianqiu/savepoint/savepoint-9bcc25-4ed827357f33
+Found 2 items
+-rw-r--r--   3 xxxxxx supergroup      74170 2020-06-05 20:27 congxianqiu/savepoint/savepoint-9bcc25-4ed827357f33/6508ac9e-0d2a-4583-96ad-1d67fb5b1c8a
+-rw-r--r--   3 xxxxxx supergroup       1205 2020-06-05 20:27 congxianqiu/savepoint/savepoint-9bcc25-4ed827357f33/_metadata
+
+
+
+[~/flink-1.11-SNAPSHOT]$ hadoop fs -mv congxianqiu/savepoint/savepoint-9bcc25-4ed827357f33 congxianqiu/savepoint/newsavepointpath
+[ ~/flink-1.11-SNAPSHOT]$ hadoop fs -ls congxianqiu/savepoint
+Found 1 items
+drwxr-xr-x   - xxxxxx supergroup          0 2020-06-05 20:27 congxianqiu/savepoint/newsavepointpath
+[~/flink-1.11-SNAPSHOT]$ hadoop fs -ls congxianqiu/savepoint/newsavepointpath
+Found 2 items
+-rw-r--r--   3 xxxxxx supergroup      74170 2020-06-05 20:27 congxianqiu/savepoint/newsavepointpath/6508ac9e-0d2a-4583-96ad-1d67fb5b1c8a
+-rw-r--r--   3 xxxxxx supergroup       1205 2020-06-05 20:27 congxianqiu/savepoint/newsavepointpath/_metadata
+
+
+[~/flink-1.11-SNAPSHOT]$ ./bin/flink run -s hdfs:///user/xxxxxx/congxianqiu/newsavepointpath/_metadata -m yarn-cluster -c com.klion26.data.FlinkDemo /data/work/congxianqiu/flink-1.11-SNAPSHOT/ft_local/Flink-Demo-1.0-SNAPSHOT.jar
+SLF4J: Class path contains multiple SLF4J bindings.
+
+
+>>>>>> jobmanager.log
+restored succesfully, can do checkpoint successfully.
+2020-06-05 21:11:10,053 INFO  org.apache.flink.runtime.checkpoint.CheckpointCoordinator    [] - Starting job b2fbfa6527391f035e8eebd791c2f64e from savepoint hdfs:///user/xxxxxx/congxianqiu/savepoint/newsavepointpath/_metadata ()
+2020-06-05 21:11:10,198 INFO  org.apache.flink.runtime.checkpoint.CheckpointCoordinator    [] - Reset the checkpoint ID of job b2fbfa6527391f035e8eebd791c2f64e to 3.
+2020-06-05 21:11:10,198 INFO  org.apache.flink.runtime.checkpoint.CheckpointCoordinator    [] - Restoring job b2fbfa6527391f035e8eebd791c2f64e from latest valid checkpoint: Checkpoint 2 @ 0 for b2fbfa6527391f035e8eebd791c2f64e.
+2020-06-05 21:11:10,206 INFO  org.apache.flink.runtime.checkpoint.CheckpointCoordinator    [] - No master state to restore
+.......
+2020-06-05 21:11:16,117 INFO  org.apache.flink.runtime.checkpoint.CheckpointCoordinator    [] - Checkpoint triggering task Source: Custom Source (1/1) of job b2fbfa6527391f035e8eebd791c2f64e is not in state RUNNING but SCHEDULED instead. Aborting checkpoint.
+2020-06-05 21:11:19,456 INFO  org.apache.flink.yarn.YarnResourceManager                    [] - Registering TaskManager with ResourceID container_e18_1591259429117_0019_01_000002 (akka.tcp://flink@10-215-128-83:56603/user/rpc/taskmanager_0) at ResourceManager
+2020-06-05 21:11:19,566 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - Source: Custom Source (1/1) (bc206dbf0e964487e5ba8c4355cb691e) switched from SCHEDULED to DEPLOYING.
+2020-06-05 21:11:19,566 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - Deploying Source: Custom Source (1/1) (attempt #0) to container_e18_1591259429117_0019_01_000002 @ 10-215-128-83 (dataPort=45167)
+2020-06-05 21:11:19,572 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - Map -> Sink: Unnamed (1/1) (7ae861cf453455d722d5d4ece0c10d1a) switched from SCHEDULED to DEPLOYING.
+2020-06-05 21:11:19,573 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - Deploying Map -> Sink: Unnamed (1/1) (attempt #0) to container_e18_1591259429117_0019_01_000002 @ 10-215-128-83 (dataPort=45167)
+2020-06-05 21:11:20,467 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - Map -> Sink: Unnamed (1/1) (7ae861cf453455d722d5d4ece0c10d1a) switched from DEPLOYING to RUNNING.
+2020-06-05 21:11:20,468 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - Source: Custom Source (1/1) (bc206dbf0e964487e5ba8c4355cb691e) switched from DEPLOYING to RUNNING.
+2020-06-05 21:12:16,199 INFO  org.apache.flink.runtime.checkpoint.CheckpointCoordinator    [] - Triggering checkpoint 3 @ 1591362736116 for job b2fbfa6527391f035e8eebd791c2f64e.
+2020-06-05 21:12:16,854 INFO  org.apache.flink.runtime.checkpoint.CheckpointCoordinator    [] - Completed checkpoint 3 for job b2fbfa6527391f035e8eebd791c2f64e (106237 bytes in 736 ms).
+2020-06-05 21:13:16,172 INFO  org.apache.flink.runtime.checkpoint.CheckpointCoordinator    [] - Triggering checkpoint 4 @ 1591362796116 for job b2fbfa6527391f035e8eebd791c2f64e.
+2020-06-05 21:13:16,680 INFO  org.apache.flink.runtime.checkpoint.CheckpointCoordinator    [] - Completed checkpoint 4 for job b2fbfa6527391f035e8eebd791c2f64e (32823 bytes in 542 ms).
+2. log for checkpoint
+
+[~/flink-1.11-SNAPSHOT]$ hadoop fs -ls congxianqiu/checkpoint/b2fbfa6527391f035e8eebd791c2f64e/      
+Found 3 items
+drwxr-xr-x   - xxxxxx supergroup          0 2020-06-05 21:15 congxianqiu/checkpoint/b2fbfa6527391f035e8eebd791c2f64e/chk-6
+drwxr-xr-x   - xxxxxx supergroup          0 2020-06-05 21:15 congxianqiu/checkpoint/b2fbfa6527391f035e8eebd791c2f64e/shared
+drwxr-xr-x   - xxxxxx supergroup          0 2020-06-05 21:11 congxianqiu/checkpoint/b2fbfa6527391f035e8eebd791c2f64e/taskowned
+
+
+[ ~/flink-1.11-SNAPSHOT]$ hadoop fs -mv congxianqiu/checkpoint/b2fbfa6527391f035e8eebd791c2f64e congxianqiu/checkpoint/movecheckpoint
+[~/flink-1.11-SNAPSHOT]$ hadoop fs -ls congxianqiu/checkpoint/movecheckpoint
+Found 3 items
+drwxr-xr-x   - xxxxxx supergroup          0 2020-06-05 21:23 congxianqiu/checkpoint/movecheckpoint/chk-6
+drwxr-xr-x   - xxxxxx supergroup          0 2020-06-05 21:23 congxianqiu/checkpoint/movecheckpoint/shared
+drwxr-xr-x   - xxxxxx supergroup          0 2020-06-05 21:23 congxianqiu/checkpoint/movecheckpoint/taskowned
+
+
+
+jobmanager.log
+failed because of FileNotFound Exception
+020-06-05 21:28:13,728 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - Map -> Sink: Unnamed (1/1) (8784ec1b22ac1ca1dd8778505e434048)
+ switched from DEPLOYING to RUNNING.
+2020-06-05 21:28:13,745 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - Map -> Sink: Unnamed (1/1) (8784ec1b22ac1ca1dd8778505e434048)
+ switched from RUNNING to FAILED on org.apache.flink.runtime.jobmaster.slotpool.SingleLogicalSlot@1967324.
+java.lang.Exception: Exception while creating StreamOperatorStateContext.
+        at org.apache.flink.streaming.api.operators.StreamTaskStateInitializerImpl.streamOperatorStateContext(StreamTaskStateInitializerImpl.java:204) ~[flin
+k-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.api.operators.AbstractStreamOperator.initializeState(AbstractStreamOperator.java:247) ~[flink-dist_2.11-1.11-SNAPSHOT.j
+ar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.runtime.tasks.OperatorChain.initializeStateAndOpenOperators(OperatorChain.java:290) ~[flink-dist_2.11-1.11-SNAPSHOT.jar
+:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.runtime.tasks.StreamTask.lambda$beforeInvoke$0(StreamTask.java:472) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.runtime.tasks.StreamTaskActionExecutor$1.runThrowing(StreamTaskActionExecutor.java:47) ~[flink-dist_2.11-1.11-SNAPSHOT.
+jar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.runtime.tasks.StreamTask.beforeInvoke(StreamTask.java:468) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.runtime.tasks.StreamTask.invoke(StreamTask.java:521) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.runtime.taskmanager.Task.doRun(Task.java:720) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.runtime.taskmanager.Task.run(Task.java:545) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at java.lang.Thread.run(Thread.java:748) ~[?:1.8.0_144]
+Caused by: org.apache.flink.util.FlinkException: Could not restore keyed state backend for StreamMap_20ba6b65f97481d5570070de90e4e791_(1/1) from any of the 1
+ provided restore options.
+        at org.apache.flink.streaming.api.operators.BackendRestorerProcedure.createAndRestore(BackendRestorerProcedure.java:135) ~[flink-dist_2.11-1.11-SNAPS
+HOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.api.operators.StreamTaskStateInitializerImpl.keyedStatedBackend(StreamTaskStateInitializerImpl.java:317) ~[flink-dist_2
+.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.api.operators.StreamTaskStateInitializerImpl.streamOperatorStateContext(StreamTaskStateInitializerImpl.java:144) ~[flin
+k-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        ... 9 more
+Caused by: org.apache.flink.runtime.state.BackendBuildingException: Caught unexpected exception.
+        at org.apache.flink.contrib.streaming.state.RocksDBKeyedStateBackendBuilder.build(RocksDBKeyedStateBackendBuilder.java:330) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.contrib.streaming.state.RocksDBStateBackend.createKeyedStateBackend(RocksDBStateBackend.java:535) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.api.operators.StreamTaskStateInitializerImpl.lambda$keyedStatedBackend$1(StreamTaskStateInitializerImpl.java:301) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.api.operators.BackendRestorerProcedure.attemptCreateAndRestore(BackendRestorerProcedure.java:142) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.api.operators.BackendRestorerProcedure.createAndRestore(BackendRestorerProcedure.java:121) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.api.operators.StreamTaskStateInitializerImpl.keyedStatedBackend(StreamTaskStateInitializerImpl.java:317) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        at org.apache.flink.streaming.api.operators.StreamTaskStateInitializerImpl.streamOperatorStateContext(StreamTaskStateInitializerImpl.java:144) ~[flink-dist_2.11-1.11-SNAPSHOT.jar:1.11-SNAPSHOT]
+        ... 9 more
+Caused by: org.apache.hadoop.ipc.RemoteException: File does not exist: /user/xxxxxx/congxianqiu/checkpoint/b2fbfa6527391f035e8eebd791c2f64e/shared/56704ae2-d
+04c-4073-aa6b-843a40e15bbe
+        at org.apache.hadoop.hdfs.server.namenode.INodeFile.valueOf(INodeFile.java:71)
+        at org.apache.hadoop.hdfs.server.namenode.INodeFile.valueOf(INodeFile.java:61)
+        at org.apache.hadoop.hdfs.server.namenode.FSNamesystem.getBlockLocationsInt(FSNamesystem.java:1836)
+        at org.apache.hadoop.hdfs.server.namenode.FSNamesystem.getBlockLocations(FSNamesystem.java:1808)
+        at org.apache.hadoop.hdfs.server.namenode.FSNamesystem.getBlockLocations(FSNamesystem.java:1723)
+        at org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer.getBlockLocations(NameNodeRpcServer.java:588)
+        at org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolServerSideTranslatorPB.getBlockLocations(ClientNamenodeProtocolServerSideTranslatorPB.java
+:366)
+        at org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos$ClientNamenodeProtocol$2.callBlockingMethod(ClientNamenodeProtocolProtos.java)
+        at org.apache.hadoop.ipc.ProtobufRpcEngine$Server$ProtoBufRpcInvoker.call(ProtobufRpcEngine.java:616)
+        at org.apache.hadoop.ipc.RPC$Server.call(RPC.java:982)
+        at org.apache.hadoop.ipc.Server$Handler$1.run(Server.java:2217)
+        at org.apache.hadoop.ipc.Server$Handler$1.run(Server.java:2213)
+        at java.security.AccessController.doPrivileged(Native Method)
+        at javax.security.auth.Subject.doAs(Subject.java:422)
+        at org.apache.hadoop.security.UserGroupInformation.doAs(UserGroupInformation.java:1746)
+        at org.apache.hadoop.ipc.Server$Handler.run(Server.java:2213)
+
+
+        at org.apache.hadoop.ipc.Client.call(Client.java:1476) ~[hadoop-common-2.7.4.jar:?]
+        at org.apache.hadoop.ipc.Client.call(Client.java:1413) ~[hadoop-common-2.7.4.jar:?]
+        at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:229) ~[hadoop-common-2.7.4.jar:?]
+        at com.sun.proxy.$Proxy35.getBlockLocations(Unknown Source) ~[?:?]
+        at org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB.getBlockLocations(ClientNamenodeProtocolTranslatorPB.java:255) ~[hadoop-hdfs-
+2.7.4.jar:?]
+",https://issues.apache.org/jira/browse/FLINK-18091+https://issues.apache.org/jira/browse/FLINK-5763,https://github.com/apache/flink/pull/3345,,
+15,,Event values should not be included in log messages+Remove key and value from exception message,RM,RM-Ms,"
+
+In certain error situations, event values are included in log messages:
+
+2018-04-19 08:00:28 [my-component-37670563-39be-4fcb-92e1-02f115aca43c-StreamThread-2] ERROR o.a.k.s.p.i.AssignedTasks - stream-thread [my-component-37670563-39be-4fcb-92e1-02f115aca43c-StreamThread-2] Failed to commit stream task 1_1 due to the following error:
+org.apache.kafka.streams.errors.StreamsException: task [1_1] Abort sending since an error caught with a previous record (key [my-key] value [my-value] ...
+
+In some environments, this is highly undesired behavior since the values can contain sensitive information. Error logs are usually collected to separate systems not meant for storing such information (e.g. patient or financial data).",https://issues.apache.org/jira/browse/KAFKA-6804+https://issues.apache.org/jira/browse/KAFKA-8501,https://github.com/apache/kafka/blob/trunk/streams/src/main/java/org/apache/kafka/streams/processor/internals/RecordCollectorImpl.java#L185-L196+https://github.com/apache/kafka/pull/6904/commits/8e72d55651496eb5eea98a1a92b53ef64cd9dba0+https://github.com/apache/kafka/blob/trunk/streams/src/main/java/org/apache/kafka/streams/processor/internals/RecordCollectorImpl.java#L243-L254,,
+16,,"Silence ERROR logs from CalciteException, SqlValidatorException",IL,IL-Lv,"
+
+CalciteException and SqlValidatorException log exceptions at ERROR level.
+This is not appropriate since
+1) the exception might be expected by the caller
+2) exception might contain sensitive information
+3) ERROR level is not appropriate, since error in validation does not imply business-level error.
+
+I suggest to remove `LOGGER.error` calls from Calcite code.
+
+Logging exceptions at TRACE level is fine from my point of view, so client can enable trace logging if required for debug purposes.",https://issues.apache.org/jira/browse/CALCITE-2463,https://github.com/apache/calcite/pull/797,,
+17,,KStreams RecordCollectorImpl leaks data to logs on error,RM,RM-Ms,"
+
+org.apache.kafka.streams.processor.internals.RecordCollectorImpl leaks data on error as it dumps the value / message payload to the logs.
+
+This is problematic as it may contain personally identifiable information (pii) or other secret information to plain text log files which can then be propagated to other log systems i.e Splunk.
+
+I suggest the key, and value fields be moved to debug level as it is useful for some people while error level contains the errorMessage, timestamp, topic and stackTrace.
+
+private <K, V> void recordSendError(
+    final K key,
+    final V value,
+    final Long timestamp,
+    final String topic,
+    final Exception exception
+) {
+    String errorLogMessage = LOG_MESSAGE;
+    String errorMessage = EXCEPTION_MESSAGE;
+    if (exception instanceof RetriableException) {
+        errorLogMessage += PARAMETER_HINT;
+        errorMessage += PARAMETER_HINT;
+    }
+    log.error(errorLogMessage, key, value, timestamp, topic, exception.toString());
+    sendException = new StreamsException(
+        String.format(
+            errorMessage,
+            logPrefix,
+            ""an error caught"",
+            key,
+            value,
+            timestamp,
+            topic,
+            exception.toString()
+        ),
+        exception);
+}
+",https://issues.apache.org/jira/browse/KAFKA-7510,https://github.com/apache/kafka/pull/5834,,
+18,,Remove logging of predicate filters+Hive returns wrong result when predicates on non-existing columns are pushed down to Parquet reader,SS,SS-Cr,"added the filter predicate to the debug log of HS2, but since these filters may contain sensitive information they should not be logged out.
+The log statement should be changed back to the original form.",https://issues.apache.org/jira/browse/HIVE-17052+https://issues.apache.org/jira/browse/HIVE-16869,https://issues.apache.org/jira/secure/attachment/12872361/HIVE-16869.2.patch+https://issues.apache.org/jira/secure/attachment/12875915/HIVE-17052.1.patch,,
+19,,Security: passwords logging and file permisions+Sqlline start command with password appears in the sqlline.log,IL,IL-Lv,"Description
+
+Prerequisites:
+1. Log level is set to ""all"" in the conf/logback.xml:
+
+<logger name=""org.apache.drill"" additivity=""false"">
+    <level value=""all"" />
+    <appender-ref ref=""FILE"" />
+</logger>
+
+2. PLAIN authentication mechanism is configured:
+
+  security.user.auth: {
+	enabled: true,
+	packages += ""org.apache.drill.exec.rpc.user.security"",
+	impl: ""pam"",
+	pam_profiles: [ ""sudo"", ""login"" ]
+  }
+
+Steps:
+1. Start the drillbits
+2. Connect by sqlline:
+
+/opt/mapr/drill/drill-1.13.0/bin/sqlline -u ""jdbc:drill:zk=node1:5181;"" -n user1 -p 1234
+
+3. Use check the sqlline logs:
+
+tail -F log/sqlline.log|grep 1234 -a5 -b5
+
+Expected result: Logs shouldn't contain clear-text passwords
+
+Actual result: The logs contain the sqlline start command with password:
+
+# system properties
+35333-        ""java"" : {
+35352-            # system properties
+35384:            ""command"" : ""sqlline.SqlLine -d org.apache.drill.jdbc.Driver --maxWidth=10000 --color=true -u jdbc:drill:zk=node1:5181; -n user1 -p 1234"",
+35535-            # system properties
+35567-            ""launcher"" : ""SUN_STANDARD""
+35607-        }
+Prerequisites:
+1. Log level is set to ""all"" in the conf/logback.xml:
+
+<logger name=""org.apache.drill"" additivity=""false"">
+    <level value=""all"" />
+    <appender-ref ref=""FILE"" />
+</logger>
+
+2. PLAIN authentication mechanism is configured:
+
+  security.user.auth: {
+	enabled: true,
+	packages += ""org.apache.drill.exec.rpc.user.security"",
+	impl: ""pam"",
+	pam_profiles: [ ""sudo"", ""login"" ]
+  }
+
+Steps:
+1. Start the drillbits
+2. Connect by sqlline:
+
+/opt/mapr/drill/drill-1.13.0/bin/sqlline -u ""jdbc:drill:zk=node1:5181;"" -n user1 -p 1111
+
+Expected result: Logs shouldn't contain clear-text passwords
+
+Actual results: During the drillbit startup or establishing connections via the jdbc or odbc, the following lines appear in the drillbit.log:
+
+properties {
+    key: ""password""
+    value: ""1111""
+}
+
+Same thing happens with storage configuration data, everything, including passwords is being logged to file.
+
+Another issue:
+
+Currently Drill config files has the permissions 0644:
+
+-rw-r--r--. 1 mapr mapr 1081 Nov 16 14:42 core-site-example.xml
+-rwxr-xr-x. 1 mapr mapr 1807 Dec 19 11:55 distrib-env.sh
+-rw-r--r--. 1 mapr mapr 1424 Nov 16 14:42 distrib-env.sh.prejmx
+-rw-r--r--. 1 mapr mapr 1942 Nov 16 14:42 drill-am-log.xml
+-rw-r--r--. 1 mapr mapr 1279 Dec 19 11:55 drill-distrib.conf
+-rw-r--r--. 1 mapr mapr  117 Nov 16 14:50 drill-distrib-mem-qs.conf
+-rw-r--r--. 1 mapr mapr 6016 Nov 16 14:42 drill-env.sh
+-rw-r--r--. 1 mapr mapr 1855 Nov 16 14:50 drill-on-yarn.conf
+-rw-r--r--. 1 mapr mapr 6913 Nov 16 14:42 drill-on-yarn-example.conf
+-rw-r--r--. 1 mapr mapr 1135 Dec 19 11:55 drill-override.conf
+-rw-r--r--. 1 mapr mapr 7820 Nov 16 14:42 drill-override-example.conf
+-rw-r--r--. 1 mapr mapr 3136 Nov 16 14:42 logback.xml
+-rw-r--r--. 1 mapr mapr  668 Nov 16 14:51 warden.drill-bits.conf
+-rw-r--r--. 1 mapr mapr 1581 Nov 16 14:42 yarn-client-log.xml
+
+As they may contain some sensitive information, like passwords or secret keys, they cannot be viewable to everyone",https://issues.apache.org/jira/browse/DRILL-6189+https://issues.apache.org/jira/browse/DRILL-6250,https://github.com/apache/drill/pull/1139+https://github.com/apache/drill/pull/1174,,
+20,,Kafka logs values of sensitive configs like passwords,RM,RM-Ft,"
+
+    We are using 0.9.0.1 of Kafka (Java) libraries for our Kafka consumers and producers. In one of our consumers, our consumer config had a SSL specific property which ended up being used against a non-SSL Kafka broker port. As a result, the logs ended up seeing messages like:
+
+    17:53:33,722 WARN [o.a.k.c.c.ConsumerConfig] - The configuration ssl.truststore.password = foobar was supplied but isn't a known config.
+
+    The log message is fine and makes sense, but can Kafka please not log the values of the properties and instead just include the config name which it considers as unknown? That way it won't ended up logging these potentially sensitive values. I understand that only those with access to these log files can end up seeing these values but even then some of our internal processes forbid logging such sensitive information to the logs. This log message will still end up being useful if only the config name is logged without the value. 
+
+Apparently (as noted in that thread), there's already code in the Kafka library which masks sensitive values like passwords, but it looks like there's a bug where it unintentionally logs these raw values.",https://issues.apache.org/jira/browse/KAFKA-4056,https://github.com/apache/kafka/pull/1759,,
+21,,Use individual user credentials for data source authentication+Don't persist authentication info into note.json,SS,SS-Cr,"
+
+As a user, I would like to use my credentials to authenticate with data sources.
+
+For example, I have an account in the Vertica database with credentials. I would like to use that account to create a JDBC connection instead of a shared account for all users.",https://issues.apache.org/jira/browse/ZEPPELIN-828+https://issues.apache.org/jira/browse/ZEPPELIN-835,https://github.com/apache/zeppelin/pull/904,,
+22,,ReconfigurableBase can log sensitive information + Update HttpFS to use ConfigRedactor,RM,RM-Ms,"
+
+ReconfigurableBase will log old and new configuration values, which may cause sensitive parameters (most notably cloud storage keys, though there may be other instances) to get included in the logs.
+
+Given the currently small list of reconfigurable properties, an argument could be made for simply not logging the property values at all, but this is not the only instance where potentially sensitive configuration gets written somewhere else in plaintext. I think a generic mechanism for redacting sensitive information for textual display will be useful to some of the web UIs too.
+
+There's some code in HttpFS's server class that masks sensitive configuration values when they're being logged. We should update this to use ConfigRedactor (currently used for a similar purpose when refreshing configuration) so the list of sensitive configuration parameters can be managed in one place.
+
+The list also needs a few additions for HttpFS.",https://issues.apache.org/jira/browse/HADOOP-13494+https://issues.apache.org/jira/browse/HDFS-11080,https://issues.apache.org/jira/browse/HADOOP-13494+https://issues.apache.org/jira/browse/HDFS-11080,,
+23,,listAPIs are taking too long to return results + private keys get logged when UpdateCustomCertificate gets called,RM,RM-Ms,"Usage of @LogLevel(Log4jLevel.Off) seems inappropriate to avoid logging sensitive information, why not still check the sensitive param/annotation to log or not log data?",https://issues.apache.org/jira/browse/CLOUDSTACK-8485+https://issues.apache.org/jira/browse/CLOUDSTACK-9023,https://github.com/apache/cloudstack/commit/e13df96348c60694849f91d0c025cb349aea124e,,
+24,,Hive query plan returns sensitive data to external applications,RM,RM-Ms,"
+
+Some applications are using getQueryString() method from the QueryPlan class to get the query that is being executed by Hive. The query string returned is not redacted, and it is returning sensitive information that is logged in Navigator.
+
+We need to return data redacted from the QueryPlan to avoid other applications to log sensitive data.",https://issues.apache.org/jira/browse/HIVE-9994,https://issues.apache.org/jira/browse/HIVE-9994,,
+25,,Dumping sensitive information in the debug log,RM,RM-Ms,"
+
+Brooklyn dumps sensitive information in the debug log like passwords and private keys. I tracked it (at least) to the following locations
+
+    brooklyn.entity.software.MachineLifecycleEffectorTasks. provisionAsync(MachineProvisioningLocation<?>) (current line is 239)
+
+Entities.sanitize goes just one level deep, leaving deeper info untouched (in this case the config object)
+
+    brooklyn.location.basic.BasicLocationRegistry.updateDefinedLocations() (current line is 153)
+
+definedLocations.values() is not sanitized at all, leaving all the info from the properties file visible",https://issues.apache.org/jira/browse/BROOKLYN-10,https://github.com/apache/incubator-brooklyn/pull/546,,
+26,,Password obfuscation for DCL audit log statements,SS,SS-Ur,"
+
+The goal of this JIRA is to obfuscate passwords or any sensitive information from DCL audit log statements.
+
+Currently, (Cassandra version 4.0-rc1) logs query statements for any DCL (ROLE and USER ) queries with passwords in plaintext format in audit log files.
+
+The current workaround to avoid plain text passwords from being logged in audit log files is either by excluding DCL statements from auditing or by excluding the user who is creating these roles from auditing.
+
+It would be ideal for Cassandra to provide an option or default to obfuscate passwords or any sensitive information from DCL audit log statements.
+
+Sample audit logs with DCL queries
+
+Type: audit
+LogMessage: user:cassandra|host:localhost/127.0.0.1:7000|source:/127.0.0.1|port:51908|timestamp:1620190499676|type:CREATE_ROLE|category:DCL|operation:CREATE ROLE new_role;
+Type: audit
+LogMessage: user:cassandra|host:localhost/127.0.0.1:7000|source:/127.0.0.1|port:51908|timestamp:1620190505313|type:CREATE_ROLE|category:DCL|operation:CREATE ROLE alice WITH PASSWORD = 'password_a' AND LOGIN = true;
+Type: audit
+LogMessage: user:cassandra|host:localhost/127.0.0.1:7000|source:/127.0.0.1|port:51908|timestamp:1620190519521|type:REQUEST_FAILURE|category:ERROR|operation:ALTER ROLE bob WITH PASSWORD = 'PASSWORD_B' AND SUPERUSER = false;; bob doesn't exist
+Type: audit
+LogMessage: user:cassandra|host:localhost/127.0.0.1:7000|source:/127.0.0.1|port:51908|timestamp:1620190525376|type:CREATE_ROLE|category:DCL|operation:CREATE ROLE bob WITH PASSWORD = 'password_b' AND LOGIN = true AND SUPERUSER = true;
+Type: audit
+LogMessage: user:cassandra|host:localhost/127.0.0.1:7000|source:/127.0.0.1|port:51908|timestamp:1620190532462|type:ALTER_ROLE|category:DCL|operation:ALTER ROLE bob WITH PASSWORD = 'PASSWORD_B' AND SUPERUSER = false;
+
+It is also ideal to document this workaround or assumption in Cassandra audit log documentation until we close this JIRA",https://issues.apache.org/jira/browse/CASSANDRA-16669,https://github.com/apache/cassandra/commit/f978bea272409109e312a27a121f849879650bdb,,
+27,,Improve UserGroupInformation debug log,RM,RM-Ms,all sensitive information has been masked before screenshot sends out,https://issues.apache.org/jira/browse/HADOOP-18958,https://github.com/apache/hadoop/pull/6234,,
+28,,Incorrect username logging in AMQ601264 events,RM,RM-Ft,"We have ActiveMQ Artemis with audit logging turned on, and sometimes wrong username is logged when user gets an authorization error (audit log event AMQ601264). I have reproduced this issue when client uses STOMP to connect to the broker. In that case client username is always logged as anonymous, and source IP address seems to be correct.
+
+We have a lot of other audit log messages where different usernames are logged in single log event, but I cannot attach these logs because it contains sensitive information. I think this problem is not specific to STOMP clients because most our clients use core and openwire. I will try to reproduce it later.
+
+The problem is not specific to the current version of Artemis.
+
+Steps to reproduce (for STOMP client):
+
+1. Create Artemis instance
+
+artemis create --user admin --password admin --require-login 
+
+Edit artemis-roles.properties and artemis-users.properties to create some other user with password and non-admin role. For example, add string alice = alice to both files.
+
+Edit log4j2.properties to enable base audit logging:
+
+logger.audit_base = INFO, audit_log_file
+
+To connect to the broker with STOMP I have used python with Stompest library (it has to be installed using pip install stompest).
+
+Example STOMP producer python code (it does not handle authorization errors):
+
+ 
+
+from stompest.config import StompConfig
+from stompest.protocol import StompSpec
+from stompest.sync import Stomp
+CONFIG = StompConfig(""tcp://localhost:61613"", login=""alice"", passcode=""alice"", version=StompSpec.VERSION_1_0)
+QUEUE = 'test.queue'
+client = Stomp(CONFIG)
+client.connect()
+client.send(QUEUE, 'Test message'.encode())
+client.disconnect()
+
+Run this example code. Check broker audit.log. For example:
+
+ 
+
+2023-08-28 17:39:20,042 [AUDIT](Thread-1 (activemq-netty-threads)) AMQ601267: User alice(alice)@127.0.0.1:56685 is creating a core session on target resource ActiveMQServerImpl::name=0.0.0.0 with parameters: [ac22db0e-45b0-11ee-b333-005056abe8b9, alice, ****, 102400, org.apache.activemq.artemis.core.protocol.stomp.StompConnection@3313e538, true, false, false, false, null, org.apache.activemq.artemis.core.protocol.stomp.StompSession@2fc820ee, true, {}]
+2023-08-28 17:39:20,081 [AUDIT](Thread-1 (activemq-netty-threads)) AMQ601262: User alice(alice)@127.0.0.1:56685 is creating address on target resource: ac22db0e-45b0-11ee-b333-005056abe8b9 with parameters: [Address [name=test.queue, id=0, routingTypes={MULTICAST}, autoCreated=false, paused=false, bindingRemovedTimestamp=-1, swept=false, createdTimestamp=1693233560081], true]
+2023-08-28 17:39:20,116 [AUDIT](Thread-1 (activemq-netty-threads)) AMQ601264: User anonymous@127.0.0.1:56685 gets security check failure, reason = AMQ229032: User: alice does not have permission='CREATE_ADDRESS' on address test.queue
+org.apache.activemq.artemis.api.core.ActiveMQSecurityException: AMQ229032: User: alice does not have permission='CREATE_ADDRESS' on address test.queue
+    at org.apache.activemq.artemis.core.security.impl.SecurityStoreImpl.check(SecurityStoreImpl.java:305) [artemis-server-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.security.impl.SecurityStoreImpl.check(SecurityStoreImpl.java:227) [artemis-server-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.server.impl.ServerSessionImpl.securityCheck(ServerSessionImpl.java:503) [artemis-server-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.server.impl.ServerSessionImpl.createAddress(ServerSessionImpl.java:972) [artemis-server-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.server.impl.ServerSessionImpl.createAddress(ServerSessionImpl.java:962) [artemis-server-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.protocol.stomp.StompConnection.autoCreateDestinationIfPossible(StompConnection.java:184) [artemis-stomp-protocol-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.protocol.stomp.VersionedStompFrameHandler.onSend(VersionedStompFrameHandler.java:188) [artemis-stomp-protocol-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.protocol.stomp.VersionedStompFrameHandler.handleFrame(VersionedStompFrameHandler.java:87) [artemis-stomp-protocol-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.protocol.stomp.StompConnection.handleFrame(StompConnection.java:424) [artemis-stomp-protocol-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.protocol.stomp.StompProtocolManager.handleBuffer(StompProtocolManager.java:162) [artemis-stomp-protocol-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.protocol.stomp.StompConnection.bufferReceived(StompConnection.java:307) [artemis-stomp-protocol-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.remoting.server.impl.RemotingServiceImpl$DelegatingBufferHandler.bufferReceived(RemotingServiceImpl.java:698) [artemis-server-2.30.0.jar:2.30.0]
+    at org.apache.activemq.artemis.core.remoting.impl.netty.ActiveMQChannelHandler.channelRead(ActiveMQChannelHandler.java:73) [artemis-core-client-2.30.0.jar:2.30.0]
+    at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:442) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.channel.AbstractChannelHandlerContext.fireChannelRead(AbstractChannelHandlerContext.java:412) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.channel.DefaultChannelPipeline$HeadContext.channelRead(DefaultChannelPipeline.java:1410) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:440) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.channel.AbstractChannelHandlerContext.invokeChannelRead(AbstractChannelHandlerContext.java:420) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.channel.DefaultChannelPipeline.fireChannelRead(DefaultChannelPipeline.java:919) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.channel.nio.AbstractNioByteChannel$NioByteUnsafe.read(AbstractNioByteChannel.java:166) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.channel.nio.NioEventLoop.processSelectedKey(NioEventLoop.java:788) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.channel.nio.NioEventLoop.processSelectedKeysOptimized(NioEventLoop.java:724) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.channel.nio.NioEventLoop.processSelectedKeys(NioEventLoop.java:650) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.channel.nio.NioEventLoop.run(NioEventLoop.java:562) [netty-transport-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997) [netty-common-4.1.94.Final.jar:4.1.94.Final]
+    at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74) [netty-common-4.1.94.Final.jar:4.1.94.Final]
+    at org.apache.activemq.artemis.utils.ActiveMQThreadFactory$1.run(ActiveMQThreadFactory.java:118) [artemis-commons-2.30.0.jar:?]
+",https://issues.apache.org/jira/browse/ARTEMIS-4405,https://github.com/apache/activemq-artemis/pull/4594,,
+29,,Do not log sensitive query parameters when route cannot be created,RM,RM-Ft,"When camel cannot create a route, a FailedToCreateRouteException is thrown. This exception shows all query parameters in clear text, including sensitive information, like password. It would be beneficial to also mask sensitive information in this exception.
+
+interestingly enough, inner exceptions still mask the password.
+
+Note:
+
+The issue was originally observed on camel-sftp, but I suspect that this is a broader issue. I specified camel-log as component since it seems to be the closest fit. Please feel free to change this as need be.",https://issues.apache.org/jira/browse/CAMEL-19676,https://github.com/apache/camel/pull/10889,,
+30,,Avoid exposing sensitive infomation through a Hive Runtime exception,EE,EE-Ex,"
+
+The HiveException raised from the following methods is exposing the datarow the caused the run time exception.
+
+    ReduceRecordSource::GroupIterator::next() - around line 372
+    MapOperator::process() - around line 567
+    ExecReducer::reduce() - around line 243
+
+In all the cases, a string representation of the row is constructed on the fly and is included in
+the error message.
+
+VectorMapOperator::process() - around line 973 raises the same exception but it's not exposing the row since the row contents are not included in the error message.
+
+While trying to reproduce above error, I also found that the arguments to a UDF get exposed in log messages from FunctionRegistry::invoke() around line 1114. This too can cause sensitive information to be leaked through error message.
+
+This way some sensitive information is leaked to a user through exception message. That information may not be available to the user otherwise. Hence it's a kind of security breach or violation of access control.
+
+The contents of the row or the arguments to a function may be useful for debugging and hence it's worth to add those to logs. Hence proposal here to log a separate message with log level DEBUG or INFO containing the string representation of the row. Users can configure their logging so that DEBUG/INFO messages do not go to the client but at the same time are available in the hive server logs for debugging. The actual exception message will not contain any sensitive data like row data or argument data.",https://issues.apache.org/jira/browse/HIVE-20644,https://github.com/apache/hive/pull/439,,
+31,,Refactor ArgumentRedactor and add tests for ssl-*store-password props,RM,RM-Ft,"Refactor ArgumentRedactor to clean it up and make sure it's efficient.
+
+Add test coverage for log statements containing:
+
+-Dgemfire.ssl-truststore-password=<PASSWORD>
+-Dgemfire.ssl-keystore-password=<PASSWORD>
+
+〞
+Related to CVE-2021-34797 in which logging is vulnerable to a log file redaction of sensitive information flaw when using values that begin with characters other than letters or numbers for passwords and security properties with the prefix ""sysprop-"", ""javax.net.ssl"", or ""security-"". This issue is fixed by overhauling the log file redaction in Apache Geode versions 1.12.5, 1.13.5, and 1.14.0.",https://issues.apache.org/jira/browse/GEODE-9354,https://github.com/apache/geode/pull/6641,,
+32,,Add request parameter to the TooSlow/TooLarge warn message of RpcServer,RM,RM-Ms,What about when table schema details might be sensitive? Row key might contain sensitive information? Wouldn't want those details going to the log in that case. ,https://issues.apache.org/jira/browse/HBASE-14443,https://issues.apache.org/jira/browse/HBASE-14443,,
+33,,Debug Log level logs sensitive information,RM,RM-Ft,"
+
+When I enable debug level logging, I see
+
+```
+
+[2021-01-20 18:02:35,862] DEBUG http-outgoing-0 >> Authorization: Basic <CREDENTIALS_APPEAR_HEAR_IN_BASE64> (org.apache.http.headers:139) [2021-01-20 18:02:35,884] DEBUG http-outgoing-0 >> ""Authorization: Basic <CREDENTIALS_APPEAR_HEAR_IN_BASE64>[\r][\n]"" (org.apache.http.wire:54) [2021-01-20 18:02:35,899] DEBUG http-outgoing-0 << "" <title>Unauthorized (401)</title>[\n]"" (org.apache.http.wire:54)
+
+```
+
+If agreed, I can open a PR to mask secrets in the debug log. If that makes the log less useful, I can at least make this configurable, since in my case it is a security violation to have any secrets whatsover in the logs",https://issues.apache.org/jira/browse/HTTPCLIENT-2138,https://github.com/apache/httpcomponents-client/blob/rel/v4.5.11/httpclient/src/main/java/org/apache/http/impl/conn/LoggingManagedHttpClientConnection.java#L135,,
+34,,Basic auth extension should have logging,IL,IL-Lv,"The three classes for Connect's basic auth REST extension are pretty light on logging, which makes debugging issues and interplay between the REST extension and whatever JAAS login module the user may have configured difficult. We should add some more extensive logging to these classes, while taking care to prevent log spam in the case of repeated unauthenticated requests or leaking of sensitive information.",https://issues.apache.org/jira/browse/KAFKA-9767,https://github.com/apache/kafka/pull/8357,,
+35,,Enhance RecordCollectorImpl exceptions with more context information,RM,RM-Ms,"
+
+In KIP-182 we refactored all stores to by plain Bytes/byte[] stores and only have concrete key/value types on outer layers/wrappers of the stores.
+
+For this reason, the most inner RocksDBStore cannot provide useful error messages anymore if a put/get/delete operation fails as it only handles plain bytes.
+
+In addition, the corresponding calls to record changelog records to record collectors will also be sending byte arrays only, and hence when there is an error happening, the record collector can only display the key but not the value since it is all bytes:
+
+[ERROR] org.apache.kafka.streams.processor.internals.RecordCollectorImpl   -
+task [2_2] Error sending record (key {""eventId"":XXX,""version"":123}
+value [<byte array>] timestamp YYY) to topic TTT
+due to ...
+
+The store exceptions got fixed via KAFKA-6538.
+
+This Jira is to track the fix for RecordCollectorImpl.",https://issues.apache.org/jira/browse/KAFKA-7015,https://github.com/apache/kafka/pull/5224,,
+36,,[CamelKafkaConnect] Add config option to enable/disable payload logging,RM,RM-Ms,"We should not log record's payload by default, as it may contain sensitive information. Anyway it is useful to have a configuration option to enable/disable it for debugging purpose.",https://issues.apache.org/jira/browse/CAMEL-15018,https://github.com/apache/camel-kafka-connector/pull/193,,
+37,,StringUtils: Add method for masking strings,RM,RM-Ms,"It would be great to have a function which allows to mask the original str by replacing it's
+characters with the specified character-mask. For eaxmple to mask credit card:
+
+mask(""3566002020360505"", 4, 4, '*') = ""3566********0505""
+
+Thus the number was hidden by asterisks while first and last four digits are unmasked and seen.
+
+Common use case is to hide sensitive information from logs, by using it in toString() of classes or in inputs to log calls.
+
+I think this is ""must have"" functionality for Commons Lang library because from my experience in almost all bit projects what I saw was their home grown masking function.
+I think this is very important also because this is required for masking credit card numbers by PCI compliance. Also new GDPR rules requires to hide personal info as much as possible so masking of First and Last names now is required by laws.
+To make the world safer place the utility for masking should be already existing in platform to avoid situations when developer think ""this is better to mask but I don't have enough time now so let's do this latter"" until leak happens.
+IMHO this should be implemented even in `String` class itself.
+
+From my experience what I saw was usually few masking usages and styles:
+1. masking of passwords and names: only first and last symbols are shown, mask char is `*`
+2. masking of credit cards: only first and last 4 or 6 symbols are shown, mask char is `*`.
+3. credit card number shortest masking of last symbols i.e. `mask(""4242424242424242"") == "" *4242""` but it's not so often used, I just wanted to mention.
+4. not masking but showing a length just so see that value was passed. This can be easily achieved by usual `String.legth()` method.
+
+There is already some pull request https://github.com/apache/commons-lang/pull/332 but I decided to create the ticket because we also need to support masking for ToStringBuilder and I would like to propose PR with my own implementation of mask() function.
+If you accept my PR then I'll send another one with a new annotation @ToStringMasked in accordance to @ToStringExclude which will mark that fields should be masked. Possible usage I see like:
+
+@ToStringMasked(unmaskedStart = 4, unmaskedEnd = 4) 
+String creditCardNumber;
+
+@ToStringMasked(unmaskedStart = 1, unmaskedEnd = 1) 
+String password;
+",https://issues.apache.org/jira/browse/LANG-1400,https://github.com/apache/commons-lang/pull/332+https://github.com/apache/commons-lang/pull/335,,
+38,,Camel-exec: option to hide sensitive information in log,IL,IL-Lv,"It's possible, that ExecCommand may contain sensitive information. These commands are logged on level INFO during route execution. New configuration parameter should be introduced, which will change the level of the log for ExecCommand to DEBUG. ",https://issues.apache.org/jira/browse/CAMEL-14150,https://github.com/apache/camel/pull/3325,,
+39,,Add mask option to log EIP and log component,RM,RM-Ms,"
+
+See nabble
+http://camel.465427.n5.nabble.com/Mask-password-using-log-component-tp5794301.html
+
+We can add a mask option to the Log EIP. It would then take the toString to be logged, and then run a series of reg exp to search/replace sensitive information such as password and passphrase.
+
+We need to do this for key=value, xml and json format. So it kinda works on most common formats.
+
+We can then add this in the docs that this is what it can do, so users can use it as-is or not. Only if they have very special cases they would then need to write their own mask method and call as a bean from the log message.
+
+We can also add such functionality to the log component itself, eg <to uri=""log:xxx"">.
+
+So they reuse the same masking algorithm.
+
+See UriSupport which have masking for uris with key=value",https://issues.apache.org/jira/browse/CAMEL-10885,https://github.com/apache/camel/pull/1561+https://github.com/apache/camel/pull/1586,,
+40,,Redact Passwords While Using Option logConf=true,RM,RM-Ms,"When logConf is set to true and any sensitive information like passwords is set using spark-submit command then the passwords are logged in clear text from conf. Ideally, these passwords should be redacted as it does on UI and then printed to log for debugging purpose.",https://issues.apache.org/jira/browse/SPARK-27244,https://github.com/apache/spark/pull/24196+https://github.com/apache/spark/pull/24257,,
+41,,HttpOperationFailedException exposes password when using basic auth with user:password@host notation,EE,EE-Ex,"
+
+Simplified route:
+
+from(inUri)
+            .toD(""http4://user:password@host:port/path"");
+
+When a HttpOperationFailedException occurs the message contains the unmasked password e.g. ""HTTP operation failed invoking http://user:password@host:port/path ...""
+
+I guess Camel should mask the password.",https://issues.apache.org/jira/browse/CAMEL-12480,https://github.com/apache/camel/pull/2317,,
+42,,Remove System Information Leak in Authentication.java,SS,SS-Cr,"
+
+An information leak occurs when system data or debugging information leaves the program through an output stream or logging function.
+In the file Authentication.java,
+
+Line 137: LOG.debug(""Encrypted user key is {}"", userKey);
+Line 148: LOG.debug(""IV is {}, IV length is {}"", initVector, initVector.length());
+
+These lines may print information which can reveal some important data to user making it vulnerable to attacks, we should not log this sensitive information.",https://issues.apache.org/jira/browse/ZEPPELIN-2733,https://github.com/apache/zeppelin/pull/2468,,
+43,,Avoid logging private key in logs,SS,SS-Ur,"whirr.log file has private key logged for the User created. This could potential security threat, if logs are shared for debugging purposes.",https://issues.apache.org/jira/browse/WHIRR-499,https://issues.apache.org/jira/secure/attachment/12542460/WHIRR-499.patch,,
+44,,add ability to modify log of response before logging in LoggingOutInterceptor + add ability to modify log of response before logging in LoggingInInterceptor,RM,RM-Ms,"Modifying the response message while logging is not straightforward to achieve. LoggingOutInterceptor needs a protected method which gets called before the actual log. Subclasses of LoggingOutInterceptor can override the transform method and return whatever transformed message they want to log, e.g. replacing sensitive information with a masking character.
+Description
+
+Similar to CXF-1887 , but for LoggingInInterceptor
+
+There are situations where the incoming logs also need to be masked (e.g. customer submits credit card or CV2 number to web service).",https://issues.apache.org/jira/browse/CXF-1887 + https://issues.apache.org/jira/browse/CXF-2177,https://issues.apache.org/jira/secure/attachment/12405769/LoggingInInterceptor.patch,,
+45,,Add latency metrics for dropped messages,IL,IL-Lv,"
+
+In our production cluster, we are seeing a large number of dropped mutations. At a minimum, we should print the time the thread took to get scheduled thereby dropping the mutation (We should also print the Message / Mutation so it helps in figuring out which column family was affected). This will help find the right tuning parameter for write_timeout_in_ms.
+
+The change is small and is in StorageProxy.java and MessagingTask.java. I will submit a patch shortly. Thanks for the patch. Can you please rebase/merge to latest 2.1 HEAD? Some comments:
+
+    use debug level instead of warn in order not to pollute system.log, and not to scare away users, since dropping mutations is part of the normal load shedding mechanism. In 2.2 all debug level logging will go to debug.log file.
+    print only keyspace and table name, as logging the whole mutation might reveal sensitive information in logs
+",https://issues.apache.org/jira/browse/CASSANDRA-10580,https://issues.apache.org/jira/secure/attachment/12778155/2.2-All-Comments.patch,,
+46,,"Even if the correct username and password are configured, when ClientBroker or KafkaClient tries to establish a SASL connection to ServerBroker, an exception is thrown: (Authentication failed: Invalid username or password)",SS,SS-Cf,"Then start all brokers at the same time. Each broker has actually been started successfully, but when establishing a connection between the controller node and all brokers, the identity authentication has always failed. The connection between brokers cannot be established normally, causing the entire Kafka cluster to be unable to provide external services.
+The server log keeps printing abnormally like crazyㄩ
+
+The real ip sensitive information of the broker in the log, I use ****** instead of here
+
+ 
+
+[2021-10-29 14:16:19,831] INFO [SocketServer listenerType=ZK_BROKER, nodeId=3] Started socket server acceptors and processors (kafka.network.SocketServer)
+[2021-10-29 14:16:19,836] INFO Kafka version: 3.0.0 (org.apache.kafka.common.utils.AppInfoParser)
+[2021-10-29 14:16:19,836] INFO Kafka commitId: 8cb0a5e9d3441962 (org.apache.kafka.common.utils.AppInfoParser)
+[2021-10-29 14:16:19,836] INFO Kafka startTimeMs: 1635516979831 (org.apache.kafka.common.utils.AppInfoParser)
+[2021-10-29 14:16:19,837] INFO [KafkaServer id=3] started (kafka.server.KafkaServer)
+
+[2021-10-29 14:16:20,249] INFO [SocketServer listenerType=ZK_BROKER, nodeId=3] Failed authentication with /****** (Authentication failed: Invalid username or password) (org.apache.kafka.common.network.Selector)
+[2021-10-29 14:16:20,680] INFO [SocketServer listenerType=ZK_BROKER, nodeId=3] Failed authentication with /****** (Authentication failed: Invalid username or password) (org.apache.kafka.common.network.Selector)
+[2021-10-29 14:16:21,109] INFO [SocketServer listenerType=ZK_BROKER, nodeId=3] Failed authentication with /****** (Authentication failed: Invalid username or password) (org.apache.kafka.common.network.Selector)
+
+ 
+
+ 
+2ㄘTry to change the password of the PlainLoginModule communication between brokers in kafka_server_jaas.conf
+
+change is kJTVDziatPgjXG82sFHc4O1EIuewmlvS --> DziatPgjXG82sFHc4O1EIuewmlvS
+
+ 
+
+KafkaServer {
+
+  org.apache.kafka.common.security.plain.PlainLoginModule required
+  username=""admin""
+  password=""DziatPgjXG82sFHc4O1EIuewmlvS""
+  user_admin=""DziatPgjXG82sFHc4O1EIuewmlvS""
+  user_alice=""alice"";
+
+  org.apache.kafka.common.security.scram.ScramLoginModule required
+  username=""admin_scram""
+  password=""admin_scram_password"";
+
+ 
+};
+Rollback the password of admin in the content of kafka_server_jaas.conf, the content is as followsㄩ
+
+ 
+
+KafkaServer {
+
+  org.apache.kafka.common.security.plain.PlainLoginModule required
+  username=""admin""
+  password=""kJTVDziatPgjXG82sFHc4O1EIuewmlvS""
+  user_admin=""kJTVDziatPgjXG82sFHc4O1EIuewmlvS""
+  user_alice=""alice"";
+
+  org.apache.kafka.common.security.scram.ScramLoginModule required
+  username=""admin_scram""
+  password=""admin_scram_password"";
+
+ 
+};
+",https://issues.apache.org/jira/browse/KAFKA-13422,https://github.com/apache/kafka/pull/11461,,
+47,,Audit logging logs to little information + Expose AMQP Message through Audit Logger,RM,"RM-Ft
+","In release 2.13 issue ARTEMIS-2648 Improve the Audit logging capabilities - ASF JIRA (apache.org) was fixed. One of the changes made was a change in the AMQ601500 message in the AuditLogger-interface:
+
+@LogMessage(level = Logger.Level.INFO) @Message(id = 601500, value = ""User {0} is sending a core message with Context: {1}"", format = Message.Format.MESSAGE_FORMAT) 
+void sendMessage(String user, Object context); 
+
+A consequence of this is a lack of audit logging.
+
+Previously (i.e. version 2.11) information regarding the actual message was logged. Now only the following remains when message-level audit logging is turned on.
+
+2021-04-14 17:55:02,606 [AUDIT](Thread-6 (ActiveMQ-server-org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl$6@6fefce9e)) AMQ601500: User #######(amq)@127.0.0.1:52938 is sending a core message with Context: RoutingContextImpl(Address=null, routingType=null, PreviousAddress=null previousRoute:null, reusable=null, version=0) 
+
+This is not very helpful audit logging as it contains no reference to the actual message which was send by the user.
+
+The actual call to the AuditLogger seems to be in the ServerSessionImpl-class and looks like this:
+
+if (AuditLogger.isMessageEnabled()) {
+    AuditLogger.coreSendMessage(getUsername(), routingContext);
+} 
+
+So it seems the routingContext doesn't contain the necessary information.
+In release 2.13 issue "" ARTEMIS-2648 Improve the Audit logging capabilities"" was fixed. One of the changes made was a change in the AMQ601500 message in the AuditLogger-interface:
+
+@LogMessage(level = Logger.Level.INFO) @Message(id = 601500, value = ""User {0} is sending a core message with Context: {1}"", format = Message.Format.MESSAGE_FORMAT) 
+void sendMessage(String user, Object context); 
+
+A consequence of this is a lack of audit logging.
+
+Previously (i.e. version 2.11) information regarding the actual message was logged. Now only the following remains when message-level audit logging is turned on.
+
+2021-04-14 17:55:02,606 [AUDIT](Thread-6 (ActiveMQ-server-org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl$6@6fefce9e)) AMQ601500: User #######(amq)@127.0.0.1:52938 is sending a core message with Context: RoutingContextImpl(Address=null, routingType=null, PreviousAddress=null previousRoute:null, reusable=null, version=0) 
+
+This is not very helpful audit logging as it contains no reference to the actual message which was send by the user.
+
+The actual call to the AuditLogger seems to be in the ServerSessionImpl-class and looks like this:
+
+if (AuditLogger.isMessageEnabled()) {
+    AuditLogger.coreSendMessage(getUsername(), routingContext);
+} 
+
+So it seems the routingContext doesn't contain the necessary information.
+
+Suggestion is to at least include the header properties of the send message because this contains (in our case) information which we can use to correlate with other log-sources. Including the message payload is NOT a good option because it is likely to contain sensitive information.
+
+ ",https://issues.apache.org/jira/browse/ARTEMIS-3244 + https://issues.apache.org/jira/browse/ARTEMIS-3245 + https://issues.apache.org/jira/browse/ARTEMIS-2887,https://github.com/apache/activemq-artemis/commit/c3887ed7104efa2af2ce95794b43abde558e4b80+https://github.com/apache/activemq-artemis/pull/3247,,
+48,,System Information Leak in ftp parser,EE,EE-St,"
+
+Exception is printed to console in src/main/java/org/apache/commons/net/ftp/parser/MVSFTPEntryParser.java which can leak system information:
+
+    private boolean parseMemberList(FTPFile file, String entry) {
+        if (matches(entry)) {
+            file.setRawListing(entry);
+            String name = group(1);
+            String datestr = group(2) + "" "" + group(3);
+            file.setName(name);
+            file.setType(FTPFile.FILE_TYPE);
+            try {
+                file.setTimestamp(super.parseTimestamp(datestr));
+            } catch (ParseException e) {
+                e.printStackTrace();
+                // just ignore parsing errors.
+                // TODO check this is ok
+                return false; // this is a parsing failure too.
+            }
+            return true;
+        }
+
+        return false;
+    }
+",https://issues.apache.org/jira/browse/NET-618,https://issues.apache.org/jira/browse/NET-618,,
+49,,Credentials are being leaked to logs,SS,SS-Cr,"There is a serious issue with spring boot admin leaking credentials back to spring boot admin starter client.
+
+I'll try to explain my findings
+Spring boot starter client is sending request to spring boot admin server to register application, spring boot admin server, this is being handling this request on ""/api/applications"" route and is returning back registered application.
+
+return ResponseEntity.status(HttpStatus.CREATED).body(registeredApp);
+
+This is really serious because spring boot admin server is returning back to client metadata which contains username / password because spring boot client is logging this response to logfiles
+
+if (registeredId.compareAndSet(null, response.getBody().get(""id"").toString())) {
+						LOGGER.info(""Application registered itself as {}"", response.getBody());
+					} else {
+						LOGGER.debug(""Application refreshed itself as {}"", response.getBody());
+					}
+
+There is a serialization of these credentials in Application model which filters some keywords but the pattern is not extendable
+
+public static class MetadataSerializer extends StdSerializer<Map<String, String>> {
+		private static final long serialVersionUID = 1L;
+		private static Pattern[] keysToSanitize = createPatterns("".*password$"", "".*secret$"",
+				"".*key$"", "".*$token$"", "".*credentials.*"", "".*vcap_services$"");
+
+This is working fine with default implementation, password is transformed with asterisks
+Application registered itself as {id=f402aa60, name=spring-admin, managementUrl=http://localhost:8080/actuator, healthUrl=http://localhost:8080/actuator/health, serviceUrl=http://localhost:8080, statusInfo={status=UNKNOWN, timestamp=1510650299317, details={}}, source=http-api, metadata={user.name=admin, user.password=******}, info={}}
+
+But it really doesn't work if metadata username/password is sent in different format, our deployment with terraform in aws is configured to send username and password with following parameters: USER_NAME and USER_PASSWORD.
+
+Log example looks like:
+Application registered itself as {id=40f4ad6a, name=""client-app"", managementUrl=http://localhost.internal:5100/actuator, healthUrl=http://localhost.internal:5100/actuator/health, serviceUrl=http://localhost.internal:5100, statusInfo={status=UNKNOWN, timestamp=1510327224512, details={}}, source=http-api, metadata={user.name=springadminclient, USER_NAME=springadminclient, user.password=******, USER_PASSWORD=PLAINTEXT_PASSWORD}, info={}}
+
+My solution was to override register method on ApplicationRegistry and return registered application without metadata
+return Application.copyOf(registering).withMetadata(Collections.emptyMap()).build();
+
+I strongly suggest removing metadata from response completely as admin starter client has no use of these anyway, it only logs sensitive information in logfiles
+
+The user.password is hidden in the response via the Jackson deserializer. And the admin won't use the USER_PASSWORD - so why don't you just remove it?
+
+When querying the /api/applications endpoint on the sba-server the metadata is also shown - the user.password is also hidden there (by the jackson deserializer).
+So I would encourage you to remove the USER_PASSWORD from the metadata.
+
+We should make the sanitizing in https://github.com/codecentric/spring-boot-admin/blob/master/spring-boot-admin-server/src/main/java/de/codecentric/boot/admin/model/Application.java#L308 ignoring the case - and make the keys to sanitize configurable.
+
+Also The client doesn't need the full answer - We should just return the id.",https://github.com/codecentric/spring-boot-admin/issues/590,https://github.com/codecentric/spring-boot-admin/commit/cf2a9eee0eba51021d31df56b388220cf245086f+https://github.com/codecentric/spring-boot-admin/commit/e15d7d2dc81176429f7e6712e856c6aab73f6dc9+https://github.com/codecentric/spring-boot-admin/commit/7f2b16d1ee94d63d4417d7ea707c2acb1628bb72,,
+50,,Provisioned admin credentials are leaked into the system log ,SS,SS-Cr,"Impact
+
+A faulty function intrumentation in the (optional) kanidm patches provided by kandim-provision will cause the provisioned admin credentials to be leaked to the system log. This only impacts users which both use the provided patches and provision their admin or idm_admin account credentials this way. No other credentials are affected.",https://github.com/oddlama/kanidm-provision/security/advisories/ghsa-57fc-pcqm-53rp,https://github.com/oddlama/kanidm-provision/commit/a102b52e4a79be4263068577ba837f16c3e487a2,,
+51,,Metadata and potential password leaks via --log=,SS,SS-Ur,"Hi Team,
+
+I am using aria2 version 1.33.1 on 4.15.0-43-generic 46-Ubuntu.
+
+    It was observed that URL's which gets downloaded via --log= attribute stored sensitive information.
+    In combination with HTTP authentication a username and password can be part of the URL.
+    aria2c --log=file  https://user:passwd@example.com/
+
+    In such case the log file contains password as well, sometimes URL's may contain secret tokens, e.g. private file shares on a file hosting service.
+    In general storing metadata at unexpected places should be avoided.
+
+    However, if the above steps are repeated using the below URL the log file does not contains password.
+    aria2c --log=file https://t.me/socks?server=inputzero.io&port=22&user=dhiraj&pass=MystrongPassw0rd
+
+Request team to have a look and validate.",https://github.com/aria2/aria2/issues/1329,https://github.com/aria2/aria2/commit/37368130ca7de5491a75fd18a20c5c5cc641824a,,
+52,,[Issue] Credentials are leaked via logs when using --debug for deploy and up.,IL,IL-Lv,"If you do azd deploy --debug (or use up) the additional logging will contain the SWA deployment token in the logs when it logs the swa deploy command. Here's a snippet (I've manually removed the token though, as well as my subscription and RG info):
+
+2022/12/09 04:24:28 main.go:49: Retry: response 200
+2022/12/09 04:24:28 swa.go:69: SWA Deploy: TenantId: 72f988bf-86f1-41af-91ab-2d7cd011db47, SubscriptionId: <snip>, ResourceGroup: <snip>, ResourceName: stapp-blog-4cuer6ylvs3ni, Environment: default
+2022/12/09 04:24:28 command_runner.go:102: Run exec: 'npx -y @azure/static-web-apps-cli@1.0.0 deploy --tenant-id <snip> --subscription-id <snip> --resource-group r<snip> --app-name stapp-blog-4cuer6ylvs3ni --app-location packages/blog --output-location . --env default --no-use-keychain --deployment-token <removed for this issue>'
+2022/12/09 04:24:37 service_target_staticwebapp.go:72: 
+Welcome to Azure Static Web Apps CLI (1.0.0)",https://github.com/Azure/azure-dev/issues/1264,https://github.com/Azure/azure-dev/commit/7b3330449400afd25b9b7eb834f4581a3cf5c3d3,,
+53,,Solve Logging Sensitive Information,IL,IL-Lv,"Fixed a critical security vulnerability where console.log statements were exposing sensitive database query results. Implemented a proper logging framework with configurable log levels to prevent data leakage.
+Changes
+
+    Created a new logger middleware with configurable log levels
+    Replaced direct console.log calls in models with structured logger
+    Added environment-aware logging that suppresses sensitive data in production
+",https://github.com/RyanM-Ferreira/KomuniUI-API/pull/3,https://github.com/RyanM-Ferreira/KomuniUI-API/pull/3/commits/54ee5488549bd57b547af46feb675a530c251e7a,,
+54,,Hide sensitive information in production,EE,EE-St,"templates/bundles/TwigBundle/Exception/error.html.twig is only used in production env.
+And it displays sensitive information, like the database name.
+
+We have to remove that.
+
+We can also enhance the message, with a link to the wallabag_support_url setting.",https://github.com/wallabag/wallabag/pull/8291,https://github.com/wallabag/wallabag/pull/8291/commits/c4f615e711c32b80fe98942da36bb00690c9db2f + https://github.com/wallabag/wallabag/pull/8291/commits/5db128a071c94195d36562845f2bf1dc381f2a77,,
+55,,fix(gorgone): Sensitive Credentials Exposed in Logs,SS,SS-Cr,"Description
+
+Sensitive Credentials Exposed in Logs
+
+Fixes # MON-162285
+Type of change
+
+Patch fixing an issue (non-breaking change)
+New functionality (non-breaking change)
+Breaking change (patch or feature) that might cause side effects breaking part of the Software
+Updating documentation (missing information, typo...)",https://github.com/centreon/centreon-collect/pull/2441,https://github.com/centreon/centreon-collect/pull/2441/files,,
+56,,feature: Set sensitive variables,SS,SS-Cr,"Description
+
+? Mark cloudsql_privileged_user_password variable as sensitive
+? Prevent password exposure in Terraform logs and output",https://github.com/sparkfabrik/terraform-google-gcp-cloud-native-drupal-resources/pull/59,https://github.com/sparkfabrik/terraform-google-gcp-cloud-native-drupal-resources/pull/59/commits/cdffbcd052718c31d54501ee1d76ab1d061cd651,,
+58,,"[Precogs Alert] Sensitive Data Exposure detected (CWE-200, Risk: Medium)",SS,SS-Cr,"
+Vulnerability Details
+
+    File Path: orbit-app/src/pages/BlogsPage.jsx
+    Vulnerability Type: Sensitive Data Exposure
+    Risk Level: Medium
+
+Explanation:
+The code logs the error response data directly to the console. If the error response contains sensitive information, such as authentication tokens, user data, or internal server details, this could lead to unintentional exposure of sensitive data in logs.
+
+Please review and address the issue accordingly.",https://github.com/sameer6pre/orbit-app/pull/26,https://github.com/sameer6pre/orbit-app/pull/26/commits/462522aaded469b93ee1aa819de57b431d89fc1e,,
+59,,hide sensitive information in log output,SS,SS-Ur,"Wynika, ?e w trakcie dw車ch commit車w zosta?y dodane dane wra?liwe takie jak klucze prywatne. Aby unikn?? tego typu sytuacji
+nale?y doda? plik .gitignore do repozystorium na etapie jego tworzenia oraz umie?? w nim wpisy dla plik車w zawieraj?cych klucze prywatne. Dobr? praktyk? jest nie umieszcza? kluczy bezpo?rednio w kodzie; sugerowane jest u?ywa? plik車w konfiguracyjnych. Istniej? narz?dzia takie jak HashiCorp Vault czy AWS Secrets Manager do zarz?dzania sekretami.",https://github.com/Adrjnk/task2/pull/3/commits/40307d4e13771262135c90e4bee3636bd5be4038,https://github.com/Adrjnk/task2/pull/3/commits/40307d4e13771262135c90e4bee3636bd5be4038,,
+60,,Remove-logs-that-contain-sensitive-information,SS,SS-Ur,"
+
+The removed log included
+
+    JWT Tokens (ID tokens, refresh tokens)
+    User emails
+    Authentication secrets
+    Session cache data
+    Security tokens
+
+Needed to remove them",https://github.com/Salesfactory/gpt-rag-frontend/pull/458/commits/7eb211dc6b311c9c9e0481fd43a9f93c573060e1,https://github.com/Salesfactory/gpt-rag-frontend/pull/458/commits/7eb211dc6b311c9c9e0481fd43a9f93c573060e1,,
+61,,Reduce logging level to stop dumping sensitive information,IL,IL-Lv,Reduce logging level to stop dumping sensitive information,https://github.com/mesos/chronos/pull/899,https://github.com/mesos/chronos/pull/899,,
+62,,Mask sensitive data in log output to prevent exposure,RM,RM-Ms,"This merge request updates the logback-spring.xml configuration to mask sensitive data in log messages, such as passwords, tokens, API keys, and similar credentials. This is achieved by using a regex replacement in the log pattern, which replaces the values of sensitive fields with asterisks (******).
+Details
+
+    The log pattern now includes a %replace function that matches common sensitive field names (password, token, api_key, etc.) and replaces their values with ******.
+    This helps prevent accidental exposure of sensitive information through application logs.
+
+Why this is important
+
+Logging sensitive data can lead to security vulnerabilities and data leaks. This change ensures that such data is masked in logs, improving the security posture of the application.",https://github.com/thingersoft/code-interpreter/pull/41,https://github.com/thingersoft/code-interpreter/pull/41,,
+63,,fix/wording-leak-error-message,SS,SS-Cf,"This PR fixes error message wording and improves logging while addressing configuration leaks. It updates the global exception handler to better handle business rule violations, enhances authentication logging, and refines exception handling in invitation processing.
+
+    Adds dedicated exception handling for BusinessRuleException with proper HTTP status codes
+    Improves logging in authentication handler to include mobile number for better debugging
+    Refines exception handling in invitation handler to catch specific exceptions
+
+Reviewed Changes
+
+Copilot reviewed 5 out of 5 changed files in this pull request and generated 2 comments.
+Show a summary per file
+	
+	
+	
+	
+	
+	",https://github.com/TechMentors-LLC/charity_hub/pull/19,https://github.com/TechMentors-LLC/charity_hub/pull/19,,
+64,,[GFTCodeFixer]: Update on src/main/java/com/bank/payments/service/impl/PaymentServiceImpl.java,SS,SS-Cr,"Description:
+This pull request improves the PaymentServiceImpl class by removing hardcoded credentials, eliminating unused variables, fixing duplicate conditions, replacing print statements with proper logging, handling exceptions correctly, and avoiding returning null values. These changes enhance code quality, maintainability, and security.",https://github.com/adpigft/payments-demo/pull/9,https://github.com/adpigft/payments-demo/pull/9,,
+65,,"Refactor: Remove legacy CLI and GUI, enhance OCR and converter security",RM,RM-Ms,"Summary
+
+    Removed legacy CLI scripts (cli_basic.py.bak, cli_with_ocr.py.bak) and main GUI app (main_app.py.bak), cleaning up deprecated code.
+    Enhanced OCR engine resource management with global tracking and proper cleanup of EasyOCR readers.
+    Improved Universal Document Converter with adaptive batch sizing based on memory usage for better performance.
+    Implemented LRU caching mechanism with size tracking and eviction to optimize memory usage.
+    Added secure handling and validation of Google Vision API credentials:
+        Prefer environment variable GOOGLE_APPLICATION_CREDENTIALS for credentials path.
+        Validate credentials file format and permissions to prevent security risks.
+        Sanitize error messages to avoid leaking sensitive information.
+    Updated GUI components to display environment variable status and fallback credentials file separately.",https://github.com/Beaulewis1977/quick_ocr_doc_converter/pull/24,https://github.com/Beaulewis1977/quick_ocr_doc_converter/pull/24,,
+67,,Security: Fix critical secret management vulnerabilities and implement comprehensive security measures,SS,SS-Cr,"This PR addresses multiple critical security vulnerabilities related to secret management and implements comprehensive security measures to protect against common attack vectors.
+ Critical Issues Fixed
+1. Hardcoded Passwords Removed
+
+    Issue: Weak hardcoded passwords (admin123, password123) exposed in seed.js
+    Risk: High - Exposed credentials in version control
+    Fix: Implemented secure random password generation with environment variable support",https://github.com/arpanhub/Hard-Backend/pull/1,https://github.com/arpanhub/Hard-Backend/pull/1,,
+68,,Fix three bugs in the codebase,SS,SS-Cr,"Fix memory leak, improve API error handling, and resolve client-side API key exposure.
+
+The client-side API key exposure was a critical security vulnerability. The fix removes sensitive NEXT_PUBLIC_ environment variables from client components, requiring a server-side authentication flow for the VapiWidget, which is now indicated by a placeholder message.",https://github.com/razzacktiger/Customer-Support-Agent-/pull/1,https://github.com/razzacktiger/Customer-Support-Agent-/pull/1,,
+69,,Pensar - auto fix for Debug Mode Information Disclosure in API Client Configuration,RM,RM-Ms,"The security vulnerability in the debug logging functionality has been fixed with the following changes:
+
+    Added a new http_debug property to provide finer control over HTTP connection debugging, which is the component that could leak sensitive data. This separates general debug logging from HTTP debugging.
+
+    Modified the debug setter to:
+        Use the new http_debug property instead of directly manipulating httplib.HTTPConnection.debuglevel
+        Add a warning message about security implications when debug mode is enabled
+
+    Added the http_debug property with:
+        A getter method to return the HTTP debug status
+        A setter method that controls HTTP connection debugging and includes security warnings
+        Proper initialization in the constructor
+
+    Added warning messages that alert users when either debug or HTTP debug mode is enabled, explaining the security risks of using these features in production environments.
+
+These changes maintain backward compatibility while providing better security controls and awareness. The fix addresses the potential exposure of sensitive information like API keys and credentials in log files by separating the concerns of general debug logging from HTTP connection debugging.",https://github.com/joshkotrous/hatchet/pull/110,https://github.com/joshkotrous/hatchet/pull/110,,
+70,,Code Remediation: Security and Quality Improvements,SS,SS-Cr,"## Executive Summary
+The analysis reveals significant security and code quality vulnerabilities in the Streamlit application, with critical issues around credential management, input validation, and system stability. The most pressing concerns include hardcoded AWS credentials, lack of input sanitization, and potential security risks in response handling.
+
+## Priority Recommendations
+- Immediately replace hardcoded AWS credentials with secure credential management using IAM roles or AWS Secrets Manager
+
+    Implement comprehensive input validation and sanitization for all user inputs to prevent potential injection attacks
+
+    Refactor threading and response handling to ensure thread safety and prevent race conditions
+
+    Develop robust error handling and logging mechanisms with user-friendly error reporting
+
+    Implement session state management with explicit size limits and cleanup strategies
+    Overall Assessment
+
+    The current implementation demonstrates significant security and code quality risks. The application has multiple high and medium severity vulnerabilities that could potentially expose sensitive information, compromise system stability, and create security attack vectors. Immediate refactoring is required to improve the application's security posture and reliability.",https://github.com/VinodKumarKP/devops_agent_streamlit_app/pull/10,https://github.com/VinodKumarKP/devops_agent_streamlit_app/pull/10,,
+71,,"Sensitive service configuration values should be decrypted when processing the Ambari agent command script, if enabled",RM,RM-Ms,"
+
+Sensitive service configuration values should be decrypted when processing the Ambari agent command script, if enabled.
+
+During the processing of resource_management.libraries.script.script.Script#execute, the command data file is to be read in and the encrypted values in the JSON document are to be decrypted before executing the command.
+
+Each encrypted value will be in the form of
+
+${enc=<algorithm_encoding>, value=<value>}
+For example:
+
+${enc=aes265_hex, value=5248...303d}",https://issues.apache.org/jira/browse/AMBARI-24894,https://github.com/apache/ambari/pull/2613,,
+72,,Prevent Sensitive Data Exposure in Logging,RM,RM-Ms,"
+Summary
+
+This merge request addresses the security concern of sensitive data exposure through logging. The following changes have been made:
+
+    In CodeService.java, the runInContainer method for the prepare phase is now called with logging disabled (false), ensuring that stdout/stderr (which may contain sensitive code or error details) are not logged.
+    In DockerService.java, container startup logging is disabled by default to prevent any sensitive output from being captured in logs.
+
+Rationale
+
+These changes ensure that potentially sensitive information, such as user code or error messages, is not inadvertently exposed through application logs. This is in line with best practices for secure coding and data privacy.
+Impact
+
+    Reduces the risk of leaking sensitive data via logs.
+    No impact on core functionality or user experience.
+
+Please review and merge if appropriate.",https://github.com/thingersoft/code-interpreter/pull/39,https://github.com/thingersoft/code-interpreter/pull/39,,
+73,,Remove sensitive debug logs,IL,IL-Lv,"
+    add a DEBUG flag and helper logError
+    wrap email/token logs in DEBUG checks
+    keep sanitized error logs without revealing user data",https://github.com/ilhanwon/Mobile-Inspection-Report-Web-App-4176/pull/1,https://github.com/ilhanwon/Mobile-Inspection-Report-Web-App-4176/pull/1,,
+74,,filter sensitive attributes in logs,RM,RM-Ft,"Motivation / Background
+
+We have two ways to configure things that get filtered in logs: filter_parameters and filter_attributes. The latter was added in 2018 and ensures that things added to filter_parameters are also added to filter attributes. However, the opposite is not true, which makes for some weird behavior right out of the box:
+
+Take this example with a model called CreditCard with two attributes: digits and cvv.
+
+cvv is added to filter_parameters by default:
+This PR aims to ensure that if you've added something to filter_attributes, it is filtered by default in the logs.",https://github.com/rails/rails/pull/55251,https://github.com/rails/rails/pull/55251,,
+75,,Potential fix for code scanning alert no. 1: Clear-text logging of sensitive information,SS,SS-Cr,"Potential fix for https://github.com/Humpnduati/25e---PyProgramming/security/code-scanning/1
+
+To fix the issue, we should ensure that only the masked representation of secret_word (i.e., blanks) is displayed to the user, and that no part of secret_word is accidentally logged or printed in clear text. We will replace print(letter, end=' ') with a mechanism that securely displays blanks without exposing sensitive data.
+
+We will also review the related logic to confirm that no sensitive data from secret_word is leaked elsewhere.",https://github.com/Humpnduati/25e---PyProgramming/pull/5,https://github.com/Humpnduati/25e---PyProgramming/pull/5,,
+76,,Use logging and mask token in config,SS,SS-Cf,"
+    replace print diagnostics with logging in config.py
+    mask bot token before output",https://github.com/barkoszloy-afk/telegram-bot-project-1/pull/27,https://github.com/barkoszloy-afk/telegram-bot-project-1/pull/27,,
+77,,Fix: Refactor logging and address potential credential leakage,SS,SS-Cr,"
+
+Credential Exposure Elimination
+Write credentials to a mktemp .netrc file, pass to curl, trap exit and remove
+
+Command Logging Removal
+Removal of command logging, replaced with outcome-focused logging
+
+Debug Mode Protection
+Credentials isolated in sub-shells with set +x protection",https://github.com/lfreleng-actions/nexus-publish-action/pull/10,https://github.com/lfreleng-actions/nexus-publish-action/pull/10,,
+78,,System Information Leak vulnerability fix (powered by Mobb),SS,SS-Ur,"This change fixes a low severity (??) System Information Leak issue reported by Fortify.
+Issue description
+
+System Information Leak occurs when sensitive system information is inadvertently disclosed to external entities, potentially aiding attackers in identifying vulnerabilities or targets.",https://github.com/tomer-mobb/Marinus/pull/13,https://github.com/tomer-mobb/Marinus/pull/13,,
+79,,Redact sensitive information in log files at release workflow,RM,RM-Ms,"This PR proposes to redact sensitive information in log files at release workflow.
+Why are the changes needed?
+
+The output files are already protected by ZipCrypto but this PR makes it even safer by redacting sensitive information in log files.",https://github.com/apache/spark/pull/51102,,,
+80,,SENSITIVE_HEADERS list is hardcoded,RM,RM-Ms,"
+
+The org.apache.cxf.transport.http.Headers from cxf-rt-transports-http.jar contains a behavior to mask sensitive headers when print them to a log until the  ALLOW_LOGGING_SENSITIVE_HEADERS property is set to true. 
+
+But the issue here is that the list of sensitive headers is private final and there's no public getter to modify the list and contains only 2 values (""Authorization"", ""Proxy-Authorization"")
+
+ 
+
+When you're using httpclient with some Api-Key auth or the request has any sensitive information besides this 2 headers, they would be printed to the debug console.",https://issues.apache.org/jira/browse/CXF-9082,https://github.com/apache/cxf/pull/2150,,
+81,,Kinit with keytab should not display the keytab file's full path in any logs,SS,SS-Cf," The keytab is sensitive information, and the full path should not be printed in the log",https://issues.apache.org/jira/browse/HADOOP-17587,https://issues.apache.org/jira/browse/HADOOP-17587,,
+82,,Redact sensitive information from SparkSubmit console output,RM,RM-Ms,"took care of redacting sensitive information from Spark event logs and UI. However, it intentionally didn't bother redacting the same sensitive information from SparkSubmit's console output because it was on the client's machine, which already had the sensitive information on disk (in spark-defaults.conf) or on terminal (spark-submit command line).
+
+However, it seems now that it's better to redact information from SparkSubmit's console output as well because orchestration software like Oozie usually expose SparkSubmit's console output via a UI. To make matters worse, Oozie, in particular, always sets the --verbose flag on SparkSubmit invocation, making the sensitive information readily available in its UI (see code here).
+
+This is a JIRA for tracking redaction of sensitive information from SparkSubmit's console output.",https://issues.apache.org/jira/browse/SPARK-19720,https://github.com/apache/spark/pull/17047 + https://github.com/apache/spark/pull/18765 + https://github.com/apache/spark/pull/18802,,
+83,,jdbc URL can contain sensitive information that should not be logged,SS,SS-Ur,"It is possible to put passwords in the jdbc connection url and some jdbc drivers will supposedly use that. (derby, mysql). This information is considered sensitive, and should be masked out, while logging the connection url",https://issues.apache.org/jira/browse/HIVE-20796,https://issues.apache.org/jira/browse/HIVE-20796,,
+84,,Hiding sensitive information in request and response logs via configuration,RM,RM-Ms,"When request hitting the cxf-logging enabled system. It logged all the details in request in plain text,. If the request body contains sensitive data like passwords, imi numbers and sms messages, all details logged, same applied to response as well. With this improvement we can hide it based on the configured keys.",https://issues.apache.org/jira/browse/CXF-8099,https://github.com/apache/cxf/pull/681,,
+85,,Don't print sensitive information in logs by default,RM,RM-Ms,"
+
+Right now, by default, node prints entries in logs of PME and long running operations. It＊s not secure, because it disclose sensitive data. However printing of entries might help with certain issues such as deadlock. So we can print hash of entries in log.
+
+  
+
+Summary of the changes:
+1. IGNITE_TO_STRING_INCLUDE_SENSITIVE is deprecated
+2. IGNITE_SENSITIVE_DATA_LOGGING is a new system property with three possible values:
+""plain"" - print as is
+""hash"" - print hash (primitives are printed as is)
+""none"" - don＊t print anything
+3. ""hash"" is default value
+4. If a node starts with explicit IGNITE_TO_STRING_INCLUDE_SENSITIVE the value converts to IGNITE_SENSITIVE_DATA_LOGGING:
+true -> plain
+false -> none",https://issues.apache.org/jira/browse/IGNITE-13929,https://github.com/apache/ignite/pull/9611,,
+86,,Fix the problem that SwaggerProducerOperation catchs business exceptions and prints logs may reveal sensitive informations.,EE,EE-Ex,Fix the problem that SwaggerProducerOperation catchs business exceptions and prints logs may reveal sensitive informations.,https://issues.apache.org/jira/browse/SCB-2108,https://github.com/apache/servicecomb-java-chassis/pull/2021,,
+87,,OAuth's HttpAccessTokenRetriever potentially leaks secrets in logging,SS,SS-Cr,"OAuth's HttpAccessTokenRetriever potentially leaks secrets in logging 
+
+
+The OAuth code that communicates via HTTP with the IdP (HttpAccessTokenRetriever.java) includes logging that outputs the request and response payloads. Among them are:
+
+    https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/security/oauthbearer/internals/secured/HttpAccessTokenRetriever.java#L265
+    https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/security/oauthbearer/internals/secured/HttpAccessTokenRetriever.java#L274
+    https://github.com/apache/kafka/blob/trunk/clients/src/main/java/org/apache/kafka/common/security/oauthbearer/internals/secured/HttpAccessTokenRetriever.java#L320
+
+It should be determined if there are other places sensitive information might be inadvertently exposed.",https://issues.apache.org/jira/browse/KAFKA-14623,https://github.com/apache/kafka/pull/13119 + https://github.com/apache/kafka/pull/13166,,
+88,,Add support for storing credentials in Azure Keyvault,RM,RM-Ms,"
+
+Currently while using azure processors we have to provide the credentials in flat text.
+
+Azure Keyvault provides a secure way to store and use credentials in the form of secret.
+
+Lets add a controller service which can help retrieve the secrets from Azure Keyvault.",https://issues.apache.org/jira/browse/NIFI-8279,https://github.com/apache/nifi/pull/4863,,
+89,,broker may expose uncommitted data to a consumer,IL,IL-Pa,"broker may expose uncommitted data to a consumer
+
+We saw the following error in the log during testing. The problem seems to be that when the high watermark was at offset 39021, the broker incorrectly exposed an uncommitted message (at offset 39022) to the client. This doesn't always happen, but can happen when certain conditions are met, which I should explain in the comments.
+
+2013/01/11 00:54:42.059 ERROR [KafkaApis] [kafka-request-handler-2] [kafka] [] [KafkaApi-277] error when processing request (service_metrics,2,39022,2000000)
+java.lang.IllegalArgumentException: Attempt to read with a maximum offset (39021) less than the start offset (39022).
+at kafka.log.LogSegment.read(LogSegment.scala:105)
+at kafka.log.Log.read(Log.scala:386)
+at kafka.server.KafkaApis.kafka$server$KafkaApis$$readMessageSet(KafkaApis.scala:369)
+at kafka.server.KafkaApis$$anonfun$kafka$server$KafkaApis$$readMessageSets$1.apply(KafkaApis.scala:327)
+at kafka.server.KafkaApis$$anonfun$kafka$server$KafkaApis$$readMessageSets$1.apply(KafkaApis.scala:323)
+at scala.collection.TraversableLike$$anonfun$map$1.apply(TraversableLike.scala:206)
+at scala.collection.TraversableLike$$anonfun$map$1.apply(TraversableLike.scala:206)
+at scala.collection.immutable.Map$Map1.foreach(Map.scala:105)
+at scala.collection.TraversableLike$class.map(TraversableLike.scala:206)
+at scala.collection.immutable.Map$Map1.map(Map.scala:93)
+at kafka.server.KafkaApis.kafka$server$KafkaApis$$readMessageSets(KafkaApis.scala:323)
+at kafka.server.KafkaApis$$anonfun$maybeUnblockDelayedFetchRequests$2.apply(KafkaApis.scala:165)
+at kafka.server.KafkaApis$$anonfun$maybeUnblockDelayedFetchRequests$2.apply(KafkaApis.scala:164)
+at scala.collection.mutable.ResizableArray$class.foreach(ResizableArray.scala:57)
+at scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:43)
+at kafka.server.KafkaApis.maybeUnblockDelayedFetchRequests(KafkaApis.scala:164)
+at kafka.server.KafkaApis$$anonfun$handleProducerRequest$3.apply(KafkaApis.scala:186)
+at kafka.server.KafkaApis$$anonfun$handleProducerRequest$3.apply(KafkaApis.scala:185)
+at scala.collection.immutable.Map$Map1.foreach(Map.scala:105)
+at kafka.server.KafkaApis.handleProducerRequest(KafkaApis.scala:185)
+at kafka.server.KafkaApis.handle(KafkaApis.scala:58)
+at kafka.server.KafkaRequestHandler.run(KafkaRequestHandler.scala:41)
+at java.lang.Thread.run(Thread.java:619)",https://issues.apache.org/jira/browse/KAFKA-698,https://issues.apache.org/jira/browse/KAFKA-698,,
+90,,Operation Logging still leaks the log4j Appenders,SS,SS-Cf,"
+    Handle dynamic routing appenders via Log4j's IdlePurgePolicy
+    Remove in-house management of appenders.
+
+Why are the changes needed?
+
+    Solve descriptor leak as shown in HIVE-24590
+    Delegate burden of managing appenders to Log4j.",https://github.com/apache/hive/pull/1849 + https://github.com/apache/hive/pull/2432,,,
+91,,Sensitive external values exposed in debug logs when using external config supplier,SS,SS-Cr,"
+
+Passwords etc are exposed in debug logs when using an external config supplied, in this case org.apache.brooklyn.core.config.external.InPlaceExternalConfigSupplier
+
+    password: $brooklyn:external(""my-credentials"", ""supersecretpassword"")
+
+2016-05-18 07:51:27,979 DEBUG o.a.b.c.b.s.d.BrooklynDslDeferredSupplier [brooklyn-execmanager-ajTGRUqW-212]: Resolved supersecretpassword from $brooklyn:external(""my-credentials"", ""password"")
+",https://issues.apache.org/jira/browse/BROOKLYN-269,https://github.com/apache/brooklyn-server/pull/659,,
+92,,Need a way to flag sensitive information in Config,SS,SS-Cf,"Currently, the full contents of a job's Config is exposed in at least a couple of places including the logs (logged by SamzaContainer), and the ApplicationMaster UI's config page. There is a security concern with doing that if sensitive information (e.g. credentials) is stored there. It would be nice to be able to mark sensitive config values so that they are not displayed in such ways. The only thing that springs to mind is a special naming convention, perhaps a ""sensitive"" prefix that would identify these values. Ideally such a capability would be baked into Config itself, but minimally Samza code that exposes Config could be made aware of the convention to avoid displaying the plaintext of sensitive values.",https://issues.apache.org/jira/browse/SAMZA-589,https://issues.apache.org/jira/browse/SAMZA-589,,
+93,,Do not dump data on error in TextExportMapper by default,RM,RM-Ms,"
+
+I've been notified offline that dumping data by default in our TextExportMapper is not entirely correct as we might unintentionally leak sensitive information to logs.
+
+Hence I would like to propose guarding that dump with a special property. This way we won't dump the data by default while still having the ability to conditionally do so if/when needed.",https://issues.apache.org/jira/browse/SQOOP-2651,https://issues.apache.org/jira/browse/SQOOP-2651,,
+94,,fix: redact passwords in logs,SS,SS-Ur,"Replaces URLs of the format rtsp://user:password@localhost:8554 with rtsp://user:xxxxx@localhost:8554 in logs.
+
+This is best-effort for now and does not handle cases where passwords appear in query strings. It should be fairly easy to extend the RedactPassword function in the future in case there are other common password pattern that are worth handling.
+
+Let me know if this should be better placed in a different package. I couldn't find a more suitable place than streams and also didn't want to introduce a new package like utils just for a single function.",https://github.com/AlexxIT/go2rtc/pull/1219,https://github.com/AlexxIT/go2rtc/pull/1219,,
+95,,Security Vulnerability in PyFlink Logging Mechanism (PythonEnvUtils.java),RM,RM-Ms,"Potential security vulnerability in the logging statement within PythonEnvUtils.java that may expose environment variables 〞 including Kubernetes-mounted secrets 〞 during PyFlink job submission.
+
+The class org.apache.flink.client.python.PythonEnvUtils logs all environment variables at job startup with the following line:
+
+ 
+LOG.info(""Starting Python process with environment variables: {}"", environment);{}
+This line is problematic because it indiscriminately logs all environment variables, which may contain sensitive credentials.
+Context: Kubernetes Operator Users Are Especially at Risk
+
+When Flink is deployed using the Flink Kubernetes Operator, secrets are commonly passed into pods as environment variables (via Kubernetes env or envFrom fields, e.g. from secretRef).
+
+This includes:
+
+    Database credentials
+
+    Cloud service keys (e.g., AWS_SECRET_ACCESS_KEY)
+
+    Tokens and encryption keys
+
+    Custom user-defined secrets
+
+Logging these secrets in plain text within the Flink JobManager or TaskManager logs violates Kubernetes security best practices, which explicitly discourage exposing sensitive environment variables in logs, and poses a serious risk in production environments.
+Proposed Fix
+
+    Redact known sensitive keys (SECRET, TOKEN, KEY, PASSWORD, etc.) before logging.
+
+Example fix snippet:
+Map<String, String> redactedEnv = redactSensitive(environment);
+LOG.info(""Starting Python process with environment variables: {}"", redactedEnv);}}
+
+    Consider an opt-in mechanism (e.g., log.python.env=true) for full environment visibility in safe/test setups.",https://issues.apache.org/jira/browse/FLINK-38035,https://github.com/apache/flink/pull/26794 + https://github.com/apache/flink/pull/26803 + https://github.com/apache/flink/pull/26841,,
+96,,Namenode WebUI prints sensitive information on Token Expiry,SS,SS-Cr,"Login to Namenode WebUI.
+
+Wait for token to expire. (Or modify the Token refresh time 
+
+dfs.namenode.delegation.token.renew/update-interval to lower value)
+
+Refresh the WebUI after the Token expiry.
+
+Full token information gets printed in WebUI.",https://issues.apache.org/jira/browse/HDFS-16563,https://github.com/apache/hadoop/pull/4241,,
+97,,Datadog API Key exposed in Flink JobManager logs,SS,SS-Cf,"
+
+When Flink is set up to report metrics to Datadog, the JobManager log containe the Datadog API key in plain format. In fact it shows up in two different places:
+
+2020-08-03 09:03:19,400 INFO  org.apache.flink.configuration.GlobalConfiguration            - Loading configuration property: metrics.reporter.dghttp.apikey, <REDACTED-KEY>
+...
+2020-08-03 09:03:20,437 INFO  org.apache.flink.runtime.metrics.ReporterSetup                - Configuring dghttp with {apikey=<REDACTED-KEY>, tags=<...>,profile:<...>,region:<...>,env:<...>, class=org.apache.flink.metrics.datadog.DatadogHttpReporter}.
+
+The expected behavior here should be that the API key in both places is hidden so that it does not end up in places where it should not be.",https://issues.apache.org/jira/browse/FLINK-20055,https://github.com/apache/flink/pull/13995,,
+98,,Prevent sensitive request headers from being logged in debug level + debug: redact sensitive info from debug logs,RM,RM-Ms,"escription:
+Hey all, first just some quick background before getting into the issue we're experiencing. We wrote a small service that is called by the ext_authz filter to perform an OIDC Authorization Flow, and verify existing JWTs stored as cookies in request headers.
+
+The JWT cookie contains sensitive information and therefore shouldn't be logged, however we noticed that when envoy is run with -l debug, various components will log the full request headers including the JWT, e.g.:
+
+envoy_1         | [2020-01-10 16:29:21.082][14][debug][http] [source/common/http/conn_manager_impl.cc:246] [C5] new stream
+envoy_1         | [2020-01-10 16:29:21.082][14][debug][http] [source/common/http/conn_manager_impl.cc:619] [C5][S6425470214323392008] request headers complete (end_stream=true):
+envoy_1         | ':authority', 'localhost:9002'
+envoy_1         | ':path', '/say'
+envoy_1         | ':method', 'GET'
+envoy_1         | 'user-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:71.0) Gecko/20100101 Firefox/71.0'
+envoy_1         | 'accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+envoy_1         | 'accept-language', 'en-US,en;q=0.5'
+envoy_1         | 'accept-encoding', 'gzip, deflate'
+envoy_1         | 'dnt', '1'
+envoy_1         | 'connection', 'keep-alive'
+envoy_1         | 'cookie', 'oidc-service-token=supersecrettoken'
+envoy_1         | 'upgrade-insecure-requests', '1'
+envoy_1         | 'x-svc-cluster', 'sayer'
+
+and
+
+envoy_1         | [2020-01-10 16:29:21.083][14][debug][router] [source/common/router/router.cc:514] [C5][S6425470214323392008] router decoding headers:
+envoy_1         | ':authority', 'localhost:9002'
+envoy_1         | ':path', '/say'
+envoy_1         | ':method', 'GET'
+envoy_1         | ':scheme', 'http'
+envoy_1         | 'user-agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:71.0) Gecko/20100101 Firefox/71.0'
+envoy_1         | 'accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+envoy_1         | 'accept-language', 'en-US,en;q=0.5'
+envoy_1         | 'accept-encoding', 'gzip, deflate'
+envoy_1         | 'dnt', '1'
+envoy_1         | 'cookie', 'oidc-service-token=supersecrettoken'
+envoy_1         | 'upgrade-insecure-requests', '1'
+envoy_1         | 'x-svc-cluster', 'sayer'
+envoy_1         | 'x-forwarded-for', '172.22.0.1'
+envoy_1         | 'x-forwarded-proto', 'http'
+envoy_1         | 'x-envoy-internal', 'true'
+envoy_1         | 'x-request-id', '635a3677-6c36-404e-9421-8c7a1f37304e'
+envoy_1         | 'x-envoy-expected-rq-timeout-ms', '20000'
+
+Normally we don't run our production envoy's with debug level, however there are instances where we will temporarily set the level to debug when troubleshooting issues etc.
+
+I'm wondering if there is some way to exclude particular headers from being logged in debug level? The only documentation I can seem to find for configuring logging is for access logs, not envoy's application logs.
+
+Redact potentially sensitive information from debug logs by masking query string and cookie values.
+
+Fix #9652
+
+Additional Description:
+
+While doing troubleshooting it might be necessary to collect, distribute and store debug level logs from Envoy. It introduces a risk of unintended data leakage, where sensitive information is revealed accidentally as part of the log files to people who should not have access to that data. Most typically, this would happen through authorization header, cookies and query string value, dumped in the log files.
+
+See example of a log entry revealing sensitive information:
+
+':authority', '127.0.0.1:8080'
+':path', '/foo?secret'
+':method', 'GET'
+'user-agent', 'HTTPie/2.6.0'
+'accept-encoding', 'gzip, deflate'
+'accept', '*/*'
+'connection', 'keep-alive'
+'cookie', 'sessionid=secret;another=secret'
+'authorization', 'Basic am9lOnBhc3N3b3Jk'
+
+This PR proposes an approach where sensitive information is masked by adding [redacted] in place of potentially sensitive values:
+
+':authority', '127.0.0.1:8080'
+':path', '/foo?[redacted]'
+':method', 'GET'
+'user-agent', 'HTTPie/2.6.0'
+'accept-encoding', 'gzip, deflate'
+'accept', '*/*'
+'connection', 'keep-alive'
+'cookie', 'sessionid=[redacted];another=[redacted]'
+'authorization', '[redacted]'
+
+Any custom header X-MyExampleApp-Token might potentially also contain sensitive information, but it would require rather elaborate configuration support to handle. This case is not considered by this PR.
+
+The proposed functionality is implemented in Http::Utilities since it contains functions for header parsing. Adding explicit dependency from Http::HeaderMap to Http::Utilities would introduce cyclic dependency, therefore forward declaration was used.
+
+The PR adds runtime guard envoy.reloadable_features.debug_include_sensitive_data which keeps the current behavior unchanged. All headers, even sensitive ones, are printed to debug log as they are. Setting the value to false enables redacting sensitive headers.",https://github.com/envoyproxy/envoy/issues/9652 + https://github.com/envoyproxy/envoy/pull/27579,https://github.com/envoyproxy/envoy/pull/27579,,
+99,,kuberuntime_manager: don't log entire container spec,RM,RM-Ms,"We shouldn't log all of spec.container because some fields like args, env may contain sensitive data.
+
+Most log lines involving containers log just the container.Name. Fix the rest to match.
+
+Change-Id: I3ca23d1f8338bdc7807ff84702222ee266730af1",https://github.com/kubernetes/kubernetes/pull/132139,https://github.com/kubernetes/kubernetes/pull/132139,,
+100,,"Recovery middleware leaks sensitive cookies, tokens, and headers into logs + Don't log requests",SS,SS-Cr,"Session cookies, API tokens, and authorization headers are all being leaked. The request is dumped if a handler hits a panic when using the recovery middleware:
+
+gin/recovery.go
+
+Line 41 in 65a65c2
+ httprequest, _ := httputil.DumpRequest(c.Request, false) 
+
+This is very insecure default behavior, and there appears to be no way to opt out other than not using the middleware.
+It can make sensitive headers readable in plaintext logs. No production HTTP server I know of does this by default, though some can be configured to do this.
+If you ship server logs somewhere for processing, aggregation, and viewing, then the problem becomes much more severe, and a lot of companies do this.
+
+Twitter and Github recently publicly disclosed that they've accidentally logged passwords and advised people to change them: https://arstechnica.com/information-technology/2018/05/twitter-advises-users-to-reset-passwords-after-bug-posts-passwords-to-internal-log/
+
+I will open a PR in a few minutes to address this issue in gin.
+
+(Edited posts because I noticed that it does not log the body, but does log the other parts of the request)",https://github.com/gin-gonic/gin/issues/1331?utm_source=chatgpt.com + https://github.com/gin-gonic/gin/pull/1370,https://github.com/gin-gonic/gin/pull/1370,,
+101,,MaskSensitiveHelper does not mask multi-line content,RM,RM-Ms,"MaskSensitiveHelper does not recognise the sensitive element name(s) if they contain multi-line content.
+
+This f.ex does not match the password element, and the data is left unmasked in the logs:
+
+maskSensitiveHelper.addSensitiveElementNames(Set.of(""password"")) 
+
+<user>testUser</user><password>my 
+secret 
+password</password> 
+",https://issues.apache.org/jira/browse/CXF-9066,https://github.com/apache/cxf/pull/2105,,
+102,,SQL text in server logs on errors,RM,RM-Ms,"Description
+
+    start and init 1 node cluster
+    execute query: select count from users where login='alex' and password='123'
+
+The problem is that server logs contain an error like:
+
+2024-09-26 08:57:05:391 +0000 [INFO][%poc-tester-SERVER-172.24.1.2-id-0%sql-execution-pool-1][JdbcQueryEventHandlerImpl] Exception while executing query [query=select count(*) from users where login='alex' and password='123']
+org.apache.ignite.sql.SqlException: IGN-SQL-4 TraceId:deb3621b-1ecf-49b1-a072-fc77ddbf579b Failed to validate query. From line 1, column 22 to line 1, column 26: Object 'USERS' not found
+ 
+
+If the user's application retries the query on any error it'll lead to log overflow and rotation. It makes logs useless for DBA.
+
+Also, it's not safe to log query text, it could contain sensitive information.
+
+Let's move messages like this (low priority messages with well known user errors like a bad query) into a separate log files to let them rotate individually.",https://issues.apache.org/jira/browse/IGNITE-23284,https://github.com/apache/ignite-3/pull/4943,,
+103,,Pre hashed passwords in CQL,RM,RM-Ms,"
+
+As seen on CASSANDRA-16801 and friends we are working across the system with plain text passwords. These can be unintentionally revealed by intermediate systems. Allowing the use of hashed passwords should mitigate that. The idea is to add a new option HASHED PASSWORD for CREATE/ALTER ROLE/USER. Examples:
+
+CREATE ROLE foo WITH login = true AND hashed password = '$2a$10$JSJEMFm6GeaW9XxT5JIheuEtPvat6i7uKbnTcxX3c1wshIIsGyUtG';
+ALTER ROLE foo WITH hashed password = '$2a$10$JSJEMFm6GeaW9XxT5JIheuEtPvat6i7uKbnTcxX3c1wshIIsGyUtG';
+
+To generate the password hash, there will be a new tool hash_password in resources/cassandra/bin
+
+Based on original works from snazy",https://issues.apache.org/jira/browse/CASSANDRA-17334,https://github.com/apache/cassandra/pull/1478,,
