@@ -1,6 +1,6 @@
 # Studying Logging Code Security and Benchmarking LLMs on its Detection & Repair
 
-Replication Package for the paper on logging code security.
+Replication Package for FSE 2026 paper "Towards Secure Logging: Characterizing and Benchmarking Logging Code Security Issues with LLMs".
 
 ## Prerequisite
 
@@ -70,3 +70,12 @@ python scripts/calculate_accuracy.py --llm-results log_security/results/llm_anal
 ```
 python scripts/merge_and_compare_similarity.py --llm-results results/llm_analysis_results.csv --combined-results results/combined_result.csv --output results/output_similarity_results.csv
 ```
+
+
+
+## Our other paper(s) related to logging issues
+
+Defects4Log: Benchmarking LLMs for Logging Code Defect Detection and Reasoning (ASE 2025)
+
+https://arxiv.org/pdf/2508.11305
+
