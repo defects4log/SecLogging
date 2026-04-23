@@ -73,7 +73,7 @@ python scripts/merge_and_compare_similarity.py --llm-results results/llm_analysi
 
 
 
-## Our other paper(s) related to logging
+## Our other papers related to improving logging practices
 
 | Paper Title                                                                                                  | Venue      | Link                                                                          |
 | ------------------------------------------------------------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------- |
