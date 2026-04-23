@@ -73,10 +73,11 @@ python scripts/merge_and_compare_similarity.py --llm-results results/llm_analysi
 
 
 
-## Our other papers related to improving logging practices
+## Our papers related to improving logging practices
 
 | Paper Title                                                                                                  | Venue      | Link                                                                          |
 | ------------------------------------------------------------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------- |
+| Towards Secure Logging: Characterizing and Benchmarking Logging Code Security Issues with LLMs               | FSE'26   | [Paper](https://arxiv.org/pdf/2604.20211)                                     |
 | Defects4Log: Benchmarking LLMs for Logging Code Defect Detection and Reasoning                               | ASE'25   | [Paper](https://arxiv.org/pdf/2508.11305)                                     |
 | On the Temporal Relations between Logging and Code                                                           | ICSE'23  | [Paper](https://ece.uwaterloo.ca/~wshang/pubs/ICSE2023_ZISHUO.pdf)            |
 | Are They All Good? Studying Practitioners’ Expectations on the Readability of Log Messages                   | ASE'23   | [Paper](https://ginolzh.github.io/papers/ASE2023_Log_Message_Readability.pdf) |
