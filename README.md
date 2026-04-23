@@ -77,15 +77,15 @@ python scripts/merge_and_compare_similarity.py --llm-results results/llm_analysi
 
 | Paper Title                                                                                                  | Venue      | Link                                                                          |
 | ------------------------------------------------------------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------- |
-| Defects4Log: Benchmarking LLMs for Logging Code Defect Detection and Reasoning                               | ASE 2025   | [Paper](https://arxiv.org/pdf/2508.11305)                                     |
-| On the Temporal Relations between Logging and Code                                                           | ICSE 2023  | [Paper](https://ece.uwaterloo.ca/~wshang/pubs/ICSE2023_ZISHUO.pdf)            |
-| Are They All Good? Studying Practitioners’ Expectations on the Readability of Log Messages                   | ASE 2023   | [Paper](https://ginolzh.github.io/papers/ASE2023_Log_Message_Readability.pdf) |
-| LoGenText-Plus: Improving Neural Machine Translation-based Logging Texts Generation with Syntactic Templates | TOSEM 2023 | [Paper](https://ece.uwaterloo.ca/~wshang/pubs/Ding_TOSEM.pdf)                 |
-| Studying Duplicate Logging Statements and Their Relationships with Code Clones                               | TSE 2022   | [Paper](https://ginolzh.github.io/papers/TSE_Duplicate_Log.pdf)               |
-| LoGenText: Automatically Generating Logging Texts Using Neural Machine Translation                           | SANER 2022 | [Paper](https://ece.uwaterloo.ca/~wshang/pubs/Zishuo_SANER_2022.pdf)          |
-| DeepLV: Suggesting Log Levels Using Ordinal Based Neural Networks                                            | ICSE 2021  | [Paper](https://ginolzh.github.io/papers/ICSE2021_Log_Level.pdf)              |
-| Where Shall We Log? Studying and Suggesting Logging Locations in Code Blocks                                 | ASE 2020   | [Paper](https://ginolzh.github.io/papers/ASE2020_Where_to_Log.pdf)            |
-| DLFinder: Characterizing and Detecting Duplicate Logging Code Smells                                         | ICSE 2019  | [Paper](https://ginolzh.github.io/papers/ICSE2019_Dup_Log.pdf)                |
+| Defects4Log: Benchmarking LLMs for Logging Code Defect Detection and Reasoning                               | ASE'25   | [Paper](https://arxiv.org/pdf/2508.11305)                                     |
+| On the Temporal Relations between Logging and Code                                                           | ICSE'23  | [Paper](https://ece.uwaterloo.ca/~wshang/pubs/ICSE2023_ZISHUO.pdf)            |
+| Are They All Good? Studying Practitioners’ Expectations on the Readability of Log Messages                   | ASE'23   | [Paper](https://ginolzh.github.io/papers/ASE2023_Log_Message_Readability.pdf) |
+| LoGenText-Plus: Improving Neural Machine Translation-based Logging Texts Generation with Syntactic Templates | TOSEM'23 | [Paper](https://ece.uwaterloo.ca/~wshang/pubs/Ding_TOSEM.pdf)                 |
+| Studying Duplicate Logging Statements and Their Relationships with Code Clones                               | TSE'22   | [Paper](https://ginolzh.github.io/papers/TSE_Duplicate_Log.pdf)               |
+| LoGenText: Automatically Generating Logging Texts Using Neural Machine Translation                           | SANER'22 | [Paper](https://ece.uwaterloo.ca/~wshang/pubs/Zishuo_SANER_2022.pdf)          |
+| DeepLV: Suggesting Log Levels Using Ordinal Based Neural Networks                                            | ICSE'21  | [Paper](https://ginolzh.github.io/papers/ICSE2021_Log_Level.pdf)              |
+| Where Shall We Log? Studying and Suggesting Logging Locations in Code Blocks                                 | ASE'20   | [Paper](https://ginolzh.github.io/papers/ASE2020_Where_to_Log.pdf)            |
+| DLFinder: Characterizing and Detecting Duplicate Logging Code Smells                                         | ICSE'19  | [Paper](https://ginolzh.github.io/papers/ICSE2019_Dup_Log.pdf)                |
 
 
 
