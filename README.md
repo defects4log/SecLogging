@@ -77,6 +77,7 @@ python scripts/merge_and_compare_similarity.py --llm-results results/llm_analysi
 
 | Paper Title                                                                                                  | Venue      | Link                                                                          |
 | ------------------------------------------------------------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------- |
+| ReLog: Execution-Aware Logging with Runtime Feedback for LLM-Oriented Debugging                              | ASE'26   | [Paper](https://arxiv.org/pdf/2603.29122)                                     |
 | Towards Secure Logging: Characterizing and Benchmarking Logging Code Security Issues with LLMs               | FSE'26   | [Paper](https://arxiv.org/pdf/2604.20211)                                     |
 | Defects4Log: Benchmarking LLMs for Logging Code Defect Detection and Reasoning                               | ASE'25   | [Paper](https://arxiv.org/pdf/2508.11305)                                     |
 | On the Temporal Relations between Logging and Code                                                           | ICSE'23  | [Paper](https://ece.uwaterloo.ca/~wshang/pubs/ICSE2023_ZISHUO.pdf)            |
